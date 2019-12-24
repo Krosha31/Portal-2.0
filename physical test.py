@@ -8,6 +8,7 @@ WIDTH = HEIGHT = 700
 size = WIDTH, HEIGHT
 screen = pygame.display.set_mode(size)
 
+
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
     image = pygame.image.load(fullname).convert()
@@ -31,7 +32,6 @@ class Player(pygame.sprite.Sprite):
         self.image = self.right_frames[self.cur_frame]
         self.rect = self.image.get_rect()
         self.rect = self.rect.move(x, y)
-
 
     def add_frames(self):
         image0 = load_image("0_l.gif")
@@ -95,13 +95,13 @@ class Floor(pygame.sprite.Sprite):
         pygame.draw.rect(self.image, pygame.Color(color), (0, 0, w, h))
 
 
-
 class Wall(pygame.sprite.Sprite):
     def __init__(self, x, y, w, h, color):
         super().__init__(wall_group, all_sprites)
         self.image = pygame.Surface((w, h), pygame.SRCALPHA, 32)
         self.rect = pygame.Rect(x, y, w, h)
         pygame.draw.rect(self.image, pygame.Color(color), (0, 0, w, h))
+
 
 class Ceiling(pygame.sprite.Sprite):
     def __init__(self, x, y, w, h, color):
@@ -130,54 +130,34 @@ cursor = pygame.sprite.Sprite(cursor_group)
 cursor.image = cursor_image
 cursor.rect = cursor.image.get_rect()
 pygame.mouse.set_visible(False)
+walking_event = 25
+pygame.time.set_timer(walking_event, 100)
 
 running = True
-time_begin = 0
-indi = False
 clock = pygame.time.Clock()
 clock_svobod_pad = pygame.time.Clock()
-boost_g = 10
+boost_g = 3
 speed_vertical = 0
 flag_jump = True
 while running:
-    if pygame.key.get_pressed()[97]:
-        if not time_begin:
-            time_begin = time.time()
-        if time.time() - time_begin > 0.1:
-            player.rect.left -= 10
-            player.curse = False
-            player.update()
-    elif pygame.key.get_pressed()[100]:
-        if not time_begin:
-            time_begin = time.time()
-        if time.time() - time_begin > 0.1:
-            player.rect.left += 10
-            player.curse = True
-            player.update()
-    else:
-        time_begin = 0
-        indi = True
-        player.normal()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.MOUSEMOTION:
             cursor.rect.topleft = event.pos
+        if event.type == walking_event and pygame.key.get_pressed()[97]:
+                player.rect.left -= 10
+                player.curse = False
+                player.update()
+        elif event.type == walking_event and pygame.key.get_pressed()[100]:
+                player.rect.left += 10
+                player.curse = True
+                player.update()
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_a:
-                if indi:
-                    player.rect.left -= 10
-                    indi = False
-                    player.curse = False
-                    player.update()
-            if event.key == pygame.K_d:
-                if indi:
-                    player.rect.left += 10
-                    indi = False
-                    player.curse = True
-                    player.update()
             if event.key == pygame.K_SPACE and flag_jump:
-                player.rect.top -= 135
+                player.rect.top -= 100
+        if not pygame.key.get_pressed()[97] and not pygame.key.get_pressed()[100]:
+            player.normal()
     if not pygame.sprite.spritecollideany(player, floor_group):
         speed_vertical += boost_g * clock_svobod_pad.tick() / 1000
         flag_jump = False
@@ -189,6 +169,7 @@ while running:
         player.rect.top += floor.rect.y - player.rect.top - HEIGHT_SPRITE + 5
     else:
         player.rect.top += speed_vertical
+    clock.tick(1000)
     screen.fill(pygame.Color("white"))
     if pygame.mouse.get_focused():
         cursor_group.draw(screen)
