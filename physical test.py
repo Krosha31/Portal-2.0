@@ -1,9 +1,9 @@
 import pygame
 import os
-import time
 
-HEIGHT_SPRITE = WIDTH_SPRITE = 100
+
 pygame.init()
+HEIGHT_SPRITE = WIDTH_SPRITE = 100
 WIDTH = HEIGHT = 700
 size = WIDTH, HEIGHT
 screen = pygame.display.set_mode(size)
@@ -94,38 +94,40 @@ class WallFloorCelling(pygame.sprite.Sprite):
         self.rect = pygame.Rect(x, y, w, h)
         pygame.draw.rect(self.image, pygame.Color(color), (0, 0, w, h))
 
+
 class Portal(pygame.sprite.Sprite):
     def __init__(self, x, y, color):
         super().__init__(all_sprites, portal_group)
         self.width = 30
         self.height = 20
+        self.speed = 1
         self.image = pygame.Surface((self.width, self.height), pygame.SRCALPHA, 32)
         self.rect = pygame.Rect(x, y, self.width, self.height)
         pygame.draw.rect(self.image, pygame.Color(color), (0, 0, self.width, self.height))
 
     def click_mouse(self, x_curs, y_curs, x_player, y_player):
-        self.rect.x = x_player
-        self.rect.y = y_player
+        self.rect.x = self.x = x_player
+        self.rect.y = self.y = y_player
+        self.move_clock = pygame.time.Clock()
         x = abs(x_curs - x_player)
         y = abs(y_curs - y_player)
+        s = (x ** 2 + y ** 2) ** 0.5
+        if s == 0:
+            return
         if x_curs < x_player:
-            xx = -10
+            x_nap = -1
         else:
-            xx = 10
+            x_nap = 1
         if y_curs < y_player:
-            yy = -10
+            y_nap = -1
         else:
-            yy = 10
+            y_nap = 1
         while not pygame.sprite.spritecollideany(self, construction_group):
-            print('ok')
-            if x > y:
-                self.rect.y += yy
-                self.rect.x += xx * (x / y)
-            else:
-                self.rect.x += xx
-                self.rect.y += yy * (y / x)
+            self.x += self.speed * x_nap * x / s
+            self.rect.x = int(self.x)
+            self.y += self.speed * y_nap * y / s
+            self.rect.y = int(self.y)
             portal_group.draw(screen)
-
 
 
 player_group = pygame.sprite.Group()
@@ -205,7 +207,7 @@ while running:
         speed_vertical = 0
         flag_jump = True
     if pygame.sprite.spritecollideany(player, ceiling_group):
-        speed_vertical = -3
+        speed_vertical = 3
     dop_y = player.rect.top
     if floor.rect.y - player.rect.top - HEIGHT_SPRITE < speed_vertical:
         player.rect.top += floor.rect.y - player.rect.top - HEIGHT_SPRITE + 5
@@ -217,3 +219,4 @@ while running:
         cursor_group.draw(screen)
     all_sprites.draw(screen)
     pygame.display.flip()
+pygame.quit()
