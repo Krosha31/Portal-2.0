@@ -103,15 +103,20 @@ class WallFloorCelling(pygame.sprite.Sprite):
 class Platform(pygame.sprite.Sprite):
     def __init__(self, x, y, w, h, color):
         super().__init__(all_sprites, construction_group, platform_group)
-        self.image = pygame.Surface((w, h), pygame.SRCALPHA, 32)
-        self.rect = pygame.Rect(x, y, w, h)
-        pygame.draw.rect(self.image, pygame.Color(color), (0, 0, w, h))
+        self.image = load_image('floor.png')
+        self.image = pygame.transform.scale(self.image, (w, h))
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect = self.image.get_rect()
+        self.rect = self.rect.move(x, y)
 
-    def interaction(self, x_player, y_player):
-        if self.rect.x + self.rect.w >= x_player + WIDTH_SPRITE >= self.rect.x and y_player < self.rect.y + self.rect.h:
-            print(y_player, self.rect.y + self.rect.h)
-            print(self.rect.h)
-            return self.rect.x - (x_player + WIDTH_SPRITE) - 10
+    def interaction_x(self, storon):
+        for i in range(1, 11):
+            player.rect.left += i
+            if pygame.sprite.pygame.sprite.collide_mask(self, player):
+                dop = pygame.sprite.pygame.sprite.collide_mask(self, player)
+                player.rect.left -= i
+                return dop
+            player.rect.left -= i
         return False
 
 class Portal(pygame.sprite.Sprite):
@@ -163,7 +168,7 @@ platform_group = pygame.sprite.Group()
 wall_left = WallFloorCelling(0, 0, 20, HEIGHT, 'gray')
 ceiling_group.add(WallFloorCelling(0, 0, WIDTH, 20, 'gray'))
 wall_right = WallFloorCelling(WIDTH - 20, 0, 20, HEIGHT, 'gray')
-Platform(200, HEIGHT - 180, 200, 20, 'gray')
+Platform(200, HEIGHT - 180, 200, 180, 'gray')
 floor = WallFloorCelling(0, HEIGHT - 20, WIDTH, 20, 'gray')
 floor_group.add(floor)
 player = Player()
@@ -177,10 +182,11 @@ cursor.rect = cursor.image.get_rect()
 pygame.mouse.set_visible(False)
 walking_event = 25
 pygame.time.set_timer(walking_event, 100)
+svobod_pad_event = 24
+pygame.time.set_timer(svobod_pad_event, 25)
 
 running = True
-clock = pygame.time.Clock()
-clock_svobod_pad = pygame.time.Clock()
+
 boost_g = 4
 speed_vertical = 0
 flag_jump = False
@@ -195,42 +201,46 @@ while running:
                 blue_portal.click_mouse(event.pos[0], event.pos[1], player.rect.left, player.rect.top)
         if event.type == walking_event and pygame.key.get_pressed()[97]:
             if not pygame.sprite.pygame.sprite.collide_mask(player, wall_left):
-                player.rect.left -= STEP
+                for i in platform_group:
+                    dop = i.interaction(player.rect.left, player.rect.top)
+                    if dop:
+                        dop = dop[0]
+                        dop_step = dop + i.rect.x - player.rect.left - 50
+                        break
+                    else:
+                        dop_step = STEP
+                player.rect.left -= dop_step
                 player.curse = False
                 player.update()
         elif event.type == walking_event and pygame.key.get_pressed()[100]:
             if not pygame.sprite.pygame.sprite.collide_mask(player, wall_right):
-                dop_step = STEP
                 for i in platform_group:
-                    if i.interaction(player.rect.left + 10, player.rect.top):
-                        dop_step = i.interaction(player.rect.left, player.rect.top)
-                        speed_vertical = 0
+                    dop = i.interaction(player.rect.left, player.rect.top)
+                    if dop:
+                        dop = dop[0]
+                        dop_step = dop + i.rect.x - player.rect.left - 80
+                        break
                     else:
                         dop_step = STEP
                 player.rect.left += dop_step
+
                 player.curse = True
                 player.update()
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE and pygame.sprite.collide_mask(player, floor):
-                speed_vertical = -1
-                flag_jump = True
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and pygame.sprite.collide_mask(player, floor):
+            speed_vertical = -15
+        if event.type == svobod_pad_event:
+            if not pygame.sprite.collide_mask(player, floor) and speed_vertical >= 0:
+                if floor.rect.y - player.rect.top - HEIGHT_SPRITE < speed_vertical:
+                    player.rect.top += floor.rect.y - player.rect.top - HEIGHT_SPRITE + 5
+                else:
+                    player.rect.top += speed_vertical
+            elif speed_vertical < 0:
+                player.rect.top += speed_vertical
+            elif pygame.sprite.collide_mask(player, floor):
+                speed_vertical = 0
+            speed_vertical += 1
         if not pygame.key.get_pressed()[97] and not pygame.key.get_pressed()[100]:
             player.normal()
-    if not pygame.sprite.collide_mask(player, floor) and speed_vertical >= 0:
-        if floor.rect.y - player.rect.top - HEIGHT_SPRITE < speed_vertical:
-            player.rect.top += floor.rect.y - player.rect.top - HEIGHT_SPRITE + 5
-        else:
-            player.rect.top += speed_vertical
-        speed_vertical += boost_g * clock_svobod_pad.tick() / 1000
-    else:
-        if speed_vertical < 0:
-            if flag_jump:
-                clock_svobod_pad = pygame.time.Clock()
-                flag_jump = False
-            player.rect.top += speed_vertical
-            speed_vertical += boost_g * clock_svobod_pad.tick() / 1000
-        else:
-            speed_vertical = 0
     if pygame.sprite.spritecollideany(player, ceiling_group):
         speed_vertical = 3
     screen.fill(pygame.Color("orange"))
