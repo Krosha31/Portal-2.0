@@ -1,13 +1,14 @@
 import pygame
 import os
+import time
 
-
-pygame.init()
+HEIGHT_CHELL = WIDTH_CHELL = 100
+WIDTH_SCREEN = HEIGHT_SCREEN = 700
+size = WIDTH_SCREEN, HEIGHT_SCREEN
+HEIGHT_PORTAL = 80
+WIDTH_PORTAL = 20
+HEIGHT_SPHERE = WIDTH_SPHERE = 16
 STEP = 10
-WIDTH_CURSOR = HEIGHT_CURSOR = 50
-HEIGHT_SPRITE = WIDTH_SPRITE = 100
-WIDTH = HEIGHT = 700
-size = WIDTH, HEIGHT
 screen = pygame.display.set_mode(size)
 
 
@@ -24,7 +25,7 @@ def load_image(name, colorkey=None):
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, x=350, y=50):
+    def __init__(self, x=350, y=350):
         super().__init__(player_group, all_sprites)
         self.left_frames = []
         self.right_frames = []
@@ -74,17 +75,23 @@ class Player(pygame.sprite.Sprite):
         image11 = pygame.transform.scale(image11, (HEIGHT_SPRITE, WIDTH_SPRITE))
         self.right_frames.append(image11)
 
-    def update(self):
-        if self.curse:
+    def update(self, curse, look):
+        if curse and look:
             self.cur_frame = (self.cur_frame + 1) % len(self.right_frames)
             self.image = self.right_frames[self.cur_frame]
-        else:
+        elif curse and not look:
+            self.cur_frame = (self.cur_frame - 1) % len(self.left_frames)
+            self.image = self.left_frames[self.cur_frame]
+        elif not curse and look:
+            self.cur_frame = (self.cur_frame - 1) % len(self.left_frames)
+            self.image = self.right_frames[self.cur_frame]
+        elif not curse and not look:
             self.cur_frame = (self.cur_frame + 1) % len(self.left_frames)
             self.image = self.left_frames[self.cur_frame]
 
-    def normal(self):
+    def normal(self, look):
         self.cur_frame = 3
-        if self.curse:
+        if look:
             self.image = self.right_frames[self.cur_frame]
         else:
             self.image = self.left_frames[self.cur_frame]
@@ -119,39 +126,104 @@ class Platform(pygame.sprite.Sprite):
             player.rect.left -= i
         return False
 
+
 class Portal(pygame.sprite.Sprite):
-    def __init__(self, x, y, color):
-        super().__init__(all_sprites, portal_group)
-        self.width = 30
-        self.height = 20
-        self.speed = 1
-        self.image = pygame.Surface((self.width, self.height), pygame.SRCALPHA, 32)
-        self.rect = pygame.Rect(x, y, self.width, self.height)
-        pygame.draw.rect(self.image, pygame.Color(color), (0, 0, self.width, self.height))
+    def __init__(self, color):
+        if color == 'blue':
+            super().__init__(blue_portal_group)
+        elif color == 'yellow':
+            super().__init__(yellow_portal_group)
+        self.speed = 10
+        self.image_list = []
+        self.add_frames(color)
+        self.rect = self.image.get_rect()
+        self.active = False
+        self.opened = False
+
+    def add_frames(self, color):
+        if color == 'blue':
+            self.image0 = load_image("Шарик 1.gif")
+            self.image0 = pygame.transform.scale(self.image0, (WIDTH_SPHERE, HEIGHT_SPHERE))
+            self.image = self.image0
+            image1 = load_image("Портал 1 вправо.gif")
+            image1 = pygame.transform.scale(image1, (WIDTH_PORTAL, HEIGHT_PORTAL))
+            self.image_list.append(image1)
+            image2 = load_image("Портал 1 вниз.gif")
+            image2 = pygame.transform.scale(image2, (HEIGHT_PORTAL, WIDTH_PORTAL))
+            self.image_list.append(image2)
+            image3 = load_image("Портал 1 влево.gif")
+            image3 = pygame.transform.scale(image3, (WIDTH_PORTAL, HEIGHT_PORTAL))
+            self.image_list.append(image3)
+            image4 = load_image("Портал 1 вверх.gif")
+            image4 = pygame.transform.scale(image4, (HEIGHT_PORTAL, WIDTH_PORTAL))
+            self.image_list.append(image4)
+        elif color == 'yellow':
+            self.image0 = load_image("Шарик 2.gif")
+            self.image0 = pygame.transform.scale(self.image0, (WIDTH_SPHERE, HEIGHT_SPHERE))
+            self.image = self.image0
+            image1 = load_image("Портал 2 вправо.gif")
+            image1 = pygame.transform.scale(image1, (WIDTH_PORTAL, HEIGHT_PORTAL))
+            self.image_list.append(image1)
+            image2 = load_image("Портал 2 вниз.gif")
+            image2 = pygame.transform.scale(image2, (HEIGHT_PORTAL, WIDTH_PORTAL))
+            self.image_list.append(image2)
+            image3 = load_image("Портал 2 влево.gif")
+            image3 = pygame.transform.scale(image3, (WIDTH_PORTAL, HEIGHT_PORTAL))
+            self.image_list.append(image3)
+            image4 = load_image("Портал 2 вверх.gif")
+            image4 = pygame.transform.scale(image4, (HEIGHT_PORTAL, WIDTH_PORTAL))
+            self.image_list.append(image4)
 
     def click_mouse(self, x_curs, y_curs, x_player, y_player):
-        self.rect.x = self.x = x_player
-        self.rect.y = self.y = y_player
-        self.move_clock = pygame.time.Clock()
-        x = abs(x_curs - x_player)
-        y = abs(y_curs - y_player)
-        s = (x ** 2 + y ** 2) ** 0.5
-        if s == 0:
+        self.image = self.image0
+        self.active = True
+        self.opened = False
+        if player.rect.left + WIDTH_CHELL // 2 - pygame.mouse.get_pos()[0] > 0:
+            self.x = x_player + 29
+        else:
+            self.x = x_player + 71
+        self.y = y_player + 39
+        self.rect.x = self.x
+        self.rect.y = self.y
+        self.xx = abs(x_curs + 18 - self.x)
+        self.yy = abs(y_curs + 18 - self.y)
+        self.ss = (self.xx ** 2 + self.yy ** 2) ** 0.5
+        if self.ss == 0:
             return
-        if x_curs < x_player:
-            x_nap = -1
+        if x_curs + 18 < self.x:
+            self.x_nap = -1
         else:
-            x_nap = 1
-        if y_curs < y_player:
-            y_nap = -1
+            self.x_nap = 1
+        if y_curs + 18 < self.y:
+            self.y_nap = -1
         else:
-            y_nap = 1
-        while not pygame.sprite.spritecollideany(self, construction_group):
-            self.x += self.speed * x_nap * x / s
-            self.rect.x = int(self.x)
-            self.y += self.speed * y_nap * y / s
-            self.rect.y = int(self.y)
-            portal_group.draw(screen)
+            self.y_nap = 1
+
+    def portal_fly(self):
+        self.x += self.speed * self.x_nap * self.xx / self.ss
+        self.rect.x = int(self.x)
+        self.y += self.speed * self.y_nap * self.yy / self.ss
+        self.rect.y = int(self.y)
+
+    def portal_open(self):
+        self.opened = True
+        construction_list = pygame.sprite.spritecollide(self, construction_group, False)
+        if construction_list[0].group == 'wr':
+            self.image = self.image_list[0]
+            self.rect.x = construction_list[0].rect.x
+            self.rect.y -= HEIGHT_PORTAL // 2
+        elif construction_list[0].group == 'f':
+            self.image = self.image_list[1]
+            self.rect.y = construction_list[0].rect.y
+            self.rect.x -= HEIGHT_PORTAL // 2
+        elif construction_list[0].group == 'wl':
+            self.image = self.image_list[2]
+            self.rect.x = construction_list[0].rect.x + construction_list[0].rect.w - WIDTH_PORTAL
+            self.rect.y -= HEIGHT_PORTAL // 2
+        elif construction_list[0].group == 'c':
+            self.image = self.image_list[3]
+            self.rect.y = construction_list[0].rect.y + construction_list[0].rect.h - WIDTH_PORTAL
+            self.rect.x -= HEIGHT_PORTAL // 2
 
 
 player_group = pygame.sprite.Group()
@@ -162,7 +234,8 @@ floor_group = pygame.sprite.Group()
 ceiling_group = pygame.sprite.Group()
 cursor_group = pygame.sprite.Group()
 construction_group = pygame.sprite.Group()
-portal_group = pygame.sprite.Group()
+blue_portal_group = pygame.sprite.Group()
+yellow_portal_group = pygame.sprite.Group()
 platform_group = pygame.sprite.Group()
 
 wall_left = WallFloorCelling(0, 0, 20, HEIGHT, 'gray')
@@ -173,9 +246,10 @@ floor = WallFloorCelling(0, HEIGHT - 20, WIDTH, 20, 'gray')
 floor_group.add(floor)
 player = Player()
 blue_portal = Portal(0, 0, 'blue')
+yellow_portal = Portal('yellow')
 
 cursor_image = load_image('cursor.png', colorkey=-1)
-cursor_image = pygame.transform.scale(cursor_image, (WIDTH_CURSOR, HEIGHT_CURSOR))
+cursor_image = pygame.transform.scale(cursor_image, (50, 50))
 cursor = pygame.sprite.Sprite(cursor_group)
 cursor.image = cursor_image
 cursor.rect = cursor.image.get_rect()
@@ -184,12 +258,16 @@ walking_event = 25
 pygame.time.set_timer(walking_event, 100)
 svobod_pad_event = 24
 pygame.time.set_timer(svobod_pad_event, 25)
+pfly_event = 26
+pygame.time.set_timer(pfly_event, 1)
 
 running = True
-
-boost_g = 4
+clock = pygame.time.Clock()
+clock_svobod_pad = pygame.time.Clock()
+boost_g = 3
 speed_vertical = 0
-flag_jump = False
+flag_jump = True
+one_step = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -210,8 +288,10 @@ while running:
                     else:
                         dop_step = STEP
                 player.rect.left -= dop_step
-                player.curse = False
-                player.update()
+                if player.rect.left + WIDTH_CHELL // 2 - pygame.mouse.get_pos()[0] > 0:
+                    player.update(False, False)
+                else:
+                    player.update(False, True)
         elif event.type == walking_event and pygame.key.get_pressed()[100]:
             if not pygame.sprite.pygame.sprite.collide_mask(player, wall_right):
                 for i in platform_group:
@@ -223,9 +303,10 @@ while running:
                     else:
                         dop_step = STEP
                 player.rect.left += dop_step
-
-                player.curse = True
-                player.update()
+                if player.rect.left + WIDTH_CHELL // 2 - pygame.mouse.get_pos()[0] > 0:
+                    player.update(True, False)
+                else:
+                    player.update(True, True)
         if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and pygame.sprite.collide_mask(player, floor):
             speed_vertical = -15
         if event.type == svobod_pad_event:
@@ -240,10 +321,25 @@ while running:
                 speed_vertical = 0
             speed_vertical += 1
         if not pygame.key.get_pressed()[97] and not pygame.key.get_pressed()[100]:
-            player.normal()
+            if pygame.mouse.get_pos()[0] < player.rect.left + WIDTH_CHELL // 2:
+                player.normal(False)
+            else:
+                player.normal(True)
+        if not pygame.sprite.spritecollideany(blue_portal, construction_group) and event.type == pfly_event \
+                and blue_portal.active and not blue_portal.opened:
+            blue_portal.portal_fly()
+        if pygame.sprite.spritecollideany(blue_portal, construction_group) and not blue_portal.opened \
+                and blue_portal.active:
+            blue_portal.portal_open()
     if pygame.sprite.spritecollideany(player, ceiling_group):
         speed_vertical = 3
     screen.fill(pygame.Color("orange"))
+    construction_group.draw(screen)
+    if blue_portal.active:
+        blue_portal_group.draw(screen)
+    if yellow_portal.active:
+        yellow_portal_group.draw(screen)
+    player_group.draw(screen)
     if pygame.mouse.get_focused():
         cursor_group.draw(screen)
     all_sprites.draw(screen)
