@@ -1,6 +1,6 @@
 import pygame
 import os
-
+import time
 
 HEIGHT_CHELL = WIDTH_CHELL = 100
 WIDTH_SCREEN = HEIGHT_SCREEN = 700
@@ -26,7 +26,7 @@ def load_image(name, colorkey=None):
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, x=350, y=0):
-        super().__init__(player_group)
+        super().__init__(player_group, all_sprites)
         self.left_frames = []
         self.right_frames = []
         self.add_frames()
@@ -434,7 +434,7 @@ while running:
     if pygame.sprite.spritecollideany(player, ceiling_group):
         speed_vertical = 3
     screen.fill(pygame.Color("orange"))
-    all_sprites.draw(screen)
+    construction_group.draw(screen)
     if blue_portal.active:
         blue_portal_group.draw(screen)
     if yellow_portal.active:
