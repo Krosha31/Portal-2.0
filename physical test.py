@@ -98,40 +98,60 @@ class Player(pygame.sprite.Sprite):
 
     def passing_through_portal(self, color):
         if color == 'blue':
-           if blue_portal.position == 1 or blue_portal.position == 3:
-               if blue_portal.rect.y <= self.rect.y + 5 <= blue_portal.rect.y + blue_portal.rect.h and \
-                       blue_portal.rect.y <= self.rect.y + self.rect.h - 5 <= blue_portal.rect.y + blue_portal.rect.h:
-                   player.teleport('yellow')
+            if blue_portal.position == 1 or blue_portal.position == 3:
+                if blue_portal.rect.y <= self.rect.y + 15 <= blue_portal.rect.y + HEIGHT_PORTAL and \
+                        blue_portal.rect.y <= self.rect.y + HEIGHT_CHELL - 15 <= blue_portal.rect.y + HEIGHT_PORTAL:
+                    if (blue_portal.position == 1 and self.rect.x + WIDTH_CHELL > blue_portal.rect.x + 20) \
+                            or (blue_portal.position == 3 and self.rect.x < blue_portal.rect.x):
+                        player.teleport('yellow')
+            elif blue_portal.position == 2 or blue_portal.position == 4:
+                if blue_portal.rect.x <= self.rect.x + 25 <= blue_portal.rect.x + HEIGHT_PORTAL and \
+                        blue_portal.rect.x <= self.rect.x + WIDTH_CHELL - 25 <= blue_portal.rect.x + HEIGHT_PORTAL:
+                    if (blue_portal.position == 2 and self.rect.y + HEIGHT_CHELL > blue_portal.rect.y) \
+                            or (blue_portal.position == 4 and self.rect.x < blue_portal.rect.y + WIDTH_PORTAL):
+                        player.teleport('yellow')
         elif color == 'yellow':
             if yellow_portal.position == 1 or yellow_portal.position == 3:
-                if yellow_portal.rect.y <= self.rect.y + 5 <= yellow_portal.rect.y + yellow_portal.rect.h and \
-                        yellow_portal.rect.y <= self.rect.y + self.rect.h - 5 <= \
-                        yellow_portal.rect.y + yellow_portal.rect.h:
-                    player.teleport('blue')
+                if yellow_portal.rect.y <= self.rect.y + 15 <= yellow_portal.rect.y + HEIGHT_PORTAL and \
+                        yellow_portal.rect.y <= self.rect.y + HEIGHT_CHELL - 15 <= \
+                        yellow_portal.rect.y + HEIGHT_PORTAL:
+                    if (yellow_portal.position == 1 and self.rect.x + WIDTH_CHELL > yellow_portal.rect.x + 20) \
+                            or (yellow_portal.position == 3 and self.rect.x < yellow_portal.rect.x):
+                        player.teleport('blue')
+            elif yellow_portal.position == 2 or yellow_portal.position == 4:
+                if yellow_portal.rect.x <= self.rect.x + 25 <= yellow_portal.rect.x + HEIGHT_PORTAL and \
+                        yellow_portal.rect.x <= self.rect.x + WIDTH_CHELL - 25 <= yellow_portal.rect.x + HEIGHT_PORTAL:
+                    if (yellow_portal.position == 2 and self.rect.y + HEIGHT_CHELL > yellow_portal.rect.y) \
+                            or (yellow_portal.position == 4 and self.rect.x < yellow_portal.rect.y + WIDTH_PORTAL):
+                        player.teleport('blue')
 
     def teleport(self, color):
         if color == 'blue':
             if blue_portal.position == 1:
-                player.rect.x = blue_portal.rect.x - 50
-                while pygame.sprite.collide_mask(player, blue_portal):
-                    player.rect.x -= 5
+                player.rect.x = blue_portal.rect.x - WIDTH_CHELL + 20
                 player.rect.y = blue_portal.rect.y
             elif blue_portal.position == 3:
-                player.rect.x = blue_portal.rect.x + WIDTH_PORTAL - 50
-                while pygame.sprite.collide_mask(player, blue_portal):
-                    player.rect.x += 5
+                player.rect.x = blue_portal.rect.x
                 player.rect.y = blue_portal.rect.y
+            elif blue_portal.position == 2:
+                player.rect.x = blue_portal.rect.x
+                player.rect.y = blue_portal.rect.y - HEIGHT_CHELL
+            elif blue_portal.position == 4:
+                player.rect.x = blue_portal.rect.x
+                player.rect.y = blue_portal.rect.y + WIDTH_PORTAL
         elif color == 'yellow':
             if yellow_portal.position == 1:
-                player.rect.x = yellow_portal.rect.x - 50
-                while pygame.sprite.collide_mask(player, yellow_portal):
-                    player.rect.x -= 5
+                player.rect.x = yellow_portal.rect.x - WIDTH_CHELL + 20
                 player.rect.y = yellow_portal.rect.y
             elif yellow_portal.position == 3:
-                player.rect.x = yellow_portal.rect.x + WIDTH_PORTAL - 50
-                while pygame.sprite.collide_mask(player, yellow_portal):
-                    player.rect.x += 5
+                player.rect.x = yellow_portal.rect.x
                 player.rect.y = yellow_portal.rect.y
+            elif yellow_portal.position == 2:
+                player.rect.x = yellow_portal.rect.x
+                player.rect.y = yellow_portal.rect.y - HEIGHT_CHELL
+            elif yellow_portal.position == 4:
+                player.rect.x = yellow_portal.rect.x
+                player.rect.y = yellow_portal.rect.y + WIDTH_PORTAL
 
 
 class WallFloorCelling(pygame.sprite.Sprite):
@@ -190,7 +210,7 @@ class Portal(pygame.sprite.Sprite):
             super().__init__(blue_portal_group)
         elif color == 'yellow':
             super().__init__(yellow_portal_group)
-        self.speed = 10
+        self.speed = 20
         self.image_list = []
         self.color = color
         self.add_frames()
@@ -407,7 +427,6 @@ ceiling_group.add(WallFloorCelling(0, 0, WIDTH_SCREEN, 20, 'c', [(20, WIDTH_SCRE
 wall_right = WallFloorCelling(WIDTH_SCREEN - 20, 0, 20, HEIGHT_SCREEN, 'wr', [(20, HEIGHT_SCREEN - 20)])
 floor = WallFloorCelling(0, HEIGHT_SCREEN - 20, WIDTH_SCREEN, 20, 'f', [(20, WIDTH_SCREEN - 20)])
 floor_group.add(floor)
-Platform(200, HEIGHT_SCREEN - 180, 200, 180, 'gray')
 player = Player()
 blue_portal = Portal('blue')
 yellow_portal = Portal('yellow')
@@ -507,9 +526,9 @@ while running:
                 and yellow_portal.active:
             yellow_portal.portal_open()
         if blue_portal.active and yellow_portal.active and blue_portal.opened and yellow_portal.opened:
-            if pygame.sprite.collide_mask(player, blue_portal):
+            if pygame.sprite.spritecollideany(player, blue_portal_group):
                 player.passing_through_portal('blue')
-            if pygame.sprite.collide_mask(player, yellow_portal):
+            if pygame.sprite.spritecollideany(player, yellow_portal_group):
                 player.passing_through_portal('yellow')
     if pygame.sprite.spritecollideany(player, ceiling_group):
         speed_vertical = 3
