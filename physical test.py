@@ -8,7 +8,7 @@ size = WIDTH_SCREEN, HEIGHT_SCREEN
 HEIGHT_PORTAL = 100
 WIDTH_PORTAL = 20
 HEIGHT_SPHERE = WIDTH_SPHERE = 16
-STEP = 10
+STEP = 20
 screen = pygame.display.set_mode(size)
 
 
