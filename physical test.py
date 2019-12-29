@@ -8,7 +8,7 @@ size = WIDTH_SCREEN, HEIGHT_SCREEN
 HEIGHT_PORTAL = 100
 WIDTH_PORTAL = 20
 HEIGHT_SPHERE = WIDTH_SPHERE = 16
-STEP = 10
+STEP = 20
 screen = pygame.display.set_mode(size)
 
 
@@ -243,9 +243,11 @@ class Portal(pygame.sprite.Sprite):
                     self.portal_construction_other_portal()
                 else:
                     self.rect.y -= HEIGHT_PORTAL // 2
-                    if self.color == 'blue' and pygame.sprite.spritecollideany(self, yellow_portal_group):
+                    if self.color == 'blue' and pygame.sprite.spritecollideany(self, yellow_portal_group) \
+                            and yellow_portal.active:
                         self.portal_other_portal_wall(interval, yellow_portal.rect.y)
-                    elif self.color == 'yellow' and pygame.sprite.spritecollideany(self, blue_portal_group):
+                    elif self.color == 'yellow' and pygame.sprite.spritecollideany(self, blue_portal_group) \
+                            and blue_portal.active:
                         self.portal_other_portal_wall(interval, blue_portal.rect.y)
                 if not self.active:
                     return
@@ -279,9 +281,11 @@ class Portal(pygame.sprite.Sprite):
                     self.portal_construction_other_portal()
                 else:
                     self.rect.x -= HEIGHT_PORTAL // 2
-                    if self.color == 'blue' and pygame.sprite.spritecollideany(self, yellow_portal_group):
+                    if self.color == 'blue' and pygame.sprite.spritecollideany(self, yellow_portal_group) \
+                            and yellow_portal.active:
                         self.portal_other_portal_floor_ceiling(interval, yellow_portal.rect.x)
-                    elif self.color == 'yellow' and pygame.sprite.spritecollideany(self, blue_portal_group):
+                    elif self.color == 'yellow' and pygame.sprite.spritecollideany(self, blue_portal_group) \
+                            and blue_portal.active:
                         self.portal_other_portal_floor_ceiling(interval, blue_portal.rect.x)
                 if not self.active:
                     return
@@ -292,9 +296,9 @@ class Portal(pygame.sprite.Sprite):
             self.active = False
 
     def portal_construction_other_portal(self):
-        if self.color == 'blue' and pygame.sprite.spritecollideany(self, yellow_portal_group):
+        if self.color == 'blue' and pygame.sprite.spritecollideany(self, yellow_portal_group) and yellow_portal.active:
             self.active = False
-        elif self.color == 'yellow' and pygame.sprite.spritecollideany(self, blue_portal_group):
+        elif self.color == 'yellow' and pygame.sprite.spritecollideany(self, blue_portal_group) and blue_portal.active:
             self.active = False
 
     def portal_other_portal_wall(self, interval, y_2):
