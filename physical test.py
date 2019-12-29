@@ -131,25 +131,33 @@ class Platform(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect = self.rect.move(x, y)
 
-    def interaction(self, right_left):
-        for i in range(STEP + 1):
-            sprite = pygame.sprite.Sprite()
-            sprite.image = player.current_sprite(right_left)
-            color_key = sprite.image.get_at((0, 0))
-            sprite.image.set_colorkey(color_key)
-            sprite.mask = pygame.mask.from_surface(sprite.image)
-            sprite.rect = sprite.image.get_rect()
-            sprite.rect = sprite.rect.move(player.rect.left, player.rect.top)
-            sprite.rect.left += i
-            dop_group = pygame.sprite.Group()
-            dop_group.add(sprite)
-            if pygame.sprite.spritecollideany(self, dop_group):
-                dop = pygame.sprite.spritecollideany(self, dop_group)
-                sprite.rect.left -= i
-                return dop.rect.x, dop.rect.w
-            sprite.rect.left -= i
-        return False
-
+    def interaction(self, side_of_movement):
+        global flag_left_step, flag_right_step
+        if side_of_movement == 'l':
+            player_left = player.rect.left - STEP
+            if self.rect.x + self.rect.w < player_left + WIDTH_CHELL:
+                if player.rect.top + HEIGHT_CHELL < self.rect.y or \
+                        player.rect.y > self.rect.y + self.rect.h:
+                    return STEP
+                else:
+                    if player_left - self.rect.x - self.rect.w + 40 >= STEP:
+                        return STEP
+                    flag_left_step = False
+                    return player_left - self.rect.x - self.rect.w + 30
+            return STEP
+        elif side_of_movement == 'r':
+            player_left = player.rect.left + STEP
+            if self.rect.x > player_left:
+                print('ok')
+                if player.rect.top + HEIGHT_CHELL < self.rect.y or \
+                        player.rect.y > self.rect.y + self.rect.h:
+                    return STEP
+                else:
+                    if self.rect.x - player_left - WIDTH_CHELL + 40 >= STEP:
+                        return STEP
+                    flag_right_step = False
+                    return self.rect.x - player_left - WIDTH_CHELL + 40
+            return STEP
 
 class Portal(pygame.sprite.Sprite):
     def __init__(self, color):
@@ -406,12 +414,12 @@ while running:
             if not pygame.sprite.pygame.sprite.collide_mask(player, wall_left):
                 dop_step = STEP
                 for i in platform_group:
-                    dop = i.interaction('l')
-                    if dop:
-                        dop_step = player.rect.left - i.rect.x - i.rect.w + 20
-                        print(dop_step)
-                        flag_left_step = False
+                    if not pygame.sprite.spritecollideany(i, player_group):
                         break
+                    dop_step = i.interaction('l')
+                    break
+                if not dop_step:
+                    dop_step = STEP
                 player.rect.left -= dop_step
                 flag_right_step = True
             if player.rect.left + WIDTH_CHELL // 2 - pygame.mouse.get_pos()[0] > 0:
@@ -422,13 +430,10 @@ while running:
             if not pygame.sprite.pygame.sprite.collide_mask(player, wall_right):
                 dop_step = STEP
                 for i in platform_group:
-                    dop = i.interaction('r')
-                    if dop:
-                        dop = dop[0]
-                        dop_step = i.rect.x - player.rect.left
-                        print(dop_step)
-                        flag_right_step = False
+                    if not pygame.sprite.spritecollideany(i, player_group):
                         break
+                    dop_step = i.interaction('r')
+                    break
                 player.rect.left += dop_step
                 flag_left_step = True
             if player.rect.left + WIDTH_CHELL // 2 - pygame.mouse.get_pos()[0] > 0:
