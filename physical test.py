@@ -9,6 +9,7 @@ HEIGHT_PORTAL = 100
 WIDTH_PORTAL = 20
 HEIGHT_SPHERE = WIDTH_SPHERE = 16
 STEP = 20
+ZERO_SPEED = 0
 screen = pygame.display.set_mode(size)
 
 
@@ -97,61 +98,183 @@ class Player(pygame.sprite.Sprite):
             self.image = self.left_frames[self.cur_frame]
 
     def passing_through_portal(self, color):
+        global speed_horizontal
         if color == 'blue':
             if blue_portal.position == 1 or blue_portal.position == 3:
                 if blue_portal.rect.y <= self.rect.y + 15 <= blue_portal.rect.y + HEIGHT_PORTAL and \
                         blue_portal.rect.y <= self.rect.y + HEIGHT_CHELL - 15 <= blue_portal.rect.y + HEIGHT_PORTAL:
-                    if (blue_portal.position == 1 and self.rect.x + WIDTH_CHELL > blue_portal.rect.x + 19) \
-                            or (blue_portal.position == 3 and self.rect.x < blue_portal.rect.x):
-                        player.teleport('yellow')
+                    if (blue_portal.position == 1 and self.rect.x + WIDTH_CHELL > blue_portal.rect.x + 19
+                        and (pygame.key.get_pressed()[100] or speed_horizontal > 0)) or \
+                            (blue_portal.position == 3 and self.rect.x < blue_portal.rect.x and
+                             (pygame.key.get_pressed()[97] or speed_horizontal < 0)):
+                        self.teleport('yellow', blue_portal.position)
             elif blue_portal.position == 2 or blue_portal.position == 4:
                 if blue_portal.rect.x <= self.rect.x + 25 <= blue_portal.rect.x + HEIGHT_PORTAL and \
                         blue_portal.rect.x <= self.rect.x + WIDTH_CHELL - 25 <= blue_portal.rect.x + HEIGHT_PORTAL:
                     if (blue_portal.position == 2 and self.rect.y + HEIGHT_CHELL > blue_portal.rect.y) \
                             or (blue_portal.position == 4 and self.rect.x < blue_portal.rect.y + WIDTH_PORTAL):
-                        player.teleport('yellow')
+                        self.teleport('yellow', blue_portal.position)
         elif color == 'yellow':
             if yellow_portal.position == 1 or yellow_portal.position == 3:
                 if yellow_portal.rect.y <= self.rect.y + 15 <= yellow_portal.rect.y + HEIGHT_PORTAL and \
                         yellow_portal.rect.y <= self.rect.y + HEIGHT_CHELL - 15 <= \
                         yellow_portal.rect.y + HEIGHT_PORTAL:
-                    if (yellow_portal.position == 1 and self.rect.x + WIDTH_CHELL > yellow_portal.rect.x + 19) \
-                            or (yellow_portal.position == 3 and self.rect.x < yellow_portal.rect.x):
-                        player.teleport('blue')
+                    if (yellow_portal.position == 1 and self.rect.x + WIDTH_CHELL > yellow_portal.rect.x + 19
+                        and (pygame.key.get_pressed()[100] or speed_horizontal > 0)) or \
+                            (yellow_portal.position == 3 and self.rect.x < yellow_portal.rect.x and
+                             (pygame.key.get_pressed()[97] or speed_horizontal < 0)):
+                        self.teleport('blue', yellow_portal.position)
             elif yellow_portal.position == 2 or yellow_portal.position == 4:
                 if yellow_portal.rect.x <= self.rect.x + 25 <= yellow_portal.rect.x + HEIGHT_PORTAL and \
                         yellow_portal.rect.x <= self.rect.x + WIDTH_CHELL - 25 <= yellow_portal.rect.x + HEIGHT_PORTAL:
                     if (yellow_portal.position == 2 and self.rect.y + HEIGHT_CHELL > yellow_portal.rect.y) \
                             or (yellow_portal.position == 4 and self.rect.x < yellow_portal.rect.y + WIDTH_PORTAL):
-                        player.teleport('blue')
+                        self.teleport('blue', yellow_portal.position)
 
-    def teleport(self, color):
+    def teleport(self, color, position):
+        global speed_vertical, speed_horizontal
         if color == 'blue':
             if blue_portal.position == 1:
-                player.rect.x = blue_portal.rect.x - WIDTH_CHELL + 19
-                player.rect.y = blue_portal.rect.y
+                self.rect.x = blue_portal.rect.x - WIDTH_CHELL + 19
+                self.rect.y = blue_portal.rect.y
+                if position == 1:
+                    if speed_horizontal != 0:
+                        speed_horizontal = -speed_horizontal
+                    else:
+                        speed_horizontal = -ZERO_SPEED
+                elif position == 2:
+                    speed_horizontal = -speed_vertical + 1
+                elif position == 3 and speed_horizontal == 0:
+                    speed_horizontal = -ZERO_SPEED
+                elif position == 4:
+                    speed_horizontal = speed_vertical
+                speed_vertical = 0
             elif blue_portal.position == 3:
-                player.rect.x = blue_portal.rect.x
-                player.rect.y = blue_portal.rect.y
+                self.rect.x = blue_portal.rect.x + 1
+                self.rect.y = blue_portal.rect.y
+                if position == 1 and speed_horizontal == 0:
+                    speed_horizontal = ZERO_SPEED
+                elif position == 3:
+                    if speed_horizontal != 0:
+                        speed_horizontal = -speed_horizontal
+                    else:
+                        speed_horizontal = -ZERO_SPEED
+                elif position == 2:
+                    speed_horizontal = speed_vertical - 1
+                elif position == 4:
+                    speed_horizontal = -speed_vertical
+                speed_vertical = 0
             elif blue_portal.position == 2:
-                player.rect.x = blue_portal.rect.x
-                player.rect.y = blue_portal.rect.y - HEIGHT_CHELL
+                self.rect.y = blue_portal.rect.y - HEIGHT_CHELL
+                if position == 1:
+                    if speed_horizontal != 0:
+                        speed_vertical = -speed_horizontal
+                    else:
+                        speed_vertical = -ZERO_SPEED
+                    self.rect.x = blue_portal.rect.x
+                elif position == 2:
+                    speed_vertical = -speed_vertical + 1
+                    self.rect.x = self.rect.x - yellow_portal.rect.x + blue_portal.rect.x
+                elif position == 3:
+                    if speed_horizontal != 0:
+                        speed_vertical = speed_horizontal
+                    else:
+                        speed_vertical = -ZERO_SPEED
+                    self.rect.x = blue_portal.rect.x
+                elif position == 4:
+                    self.rect.x = self.rect.x - yellow_portal.rect.x + blue_portal.rect.x
+                speed_horizontal = 0
             elif blue_portal.position == 4:
-                player.rect.x = blue_portal.rect.x
-                player.rect.y = blue_portal.rect.y + WIDTH_PORTAL
+                self.rect.y = blue_portal.rect.y + WIDTH_PORTAL
+                if position == 1:
+                    if speed_horizontal != 0:
+                        speed_vertical = speed_horizontal
+                    else:
+                        speed_vertical = ZERO_SPEED
+                    self.rect.x = blue_portal.rect.x
+                elif position == 2:
+                    self.rect.x = self.rect.x - yellow_portal.rect.x + blue_portal.rect.x
+                elif position == 3:
+                    if speed_horizontal != 0:
+                        speed_vertical = -speed_horizontal
+                    else:
+                        speed_vertical = ZERO_SPEED
+                    self.rect.x = blue_portal.rect.x
+                elif position == 4:
+                    speed_vertical = -speed_vertical
+                    self.rect.x = self.rect.x - yellow_portal.rect.x + blue_portal.rect.x
+                speed_horizontal = 0
         elif color == 'yellow':
             if yellow_portal.position == 1:
-                player.rect.x = yellow_portal.rect.x - WIDTH_CHELL + 19
-                player.rect.y = yellow_portal.rect.y
+                self.rect.x = yellow_portal.rect.x - WIDTH_CHELL + 19
+                self.rect.y = yellow_portal.rect.y
+                if position == 1:
+                    if speed_horizontal != 0:
+                        speed_horizontal = -speed_horizontal
+                    else:
+                        speed_horizontal = -ZERO_SPEED
+                elif position == 2:
+                    speed_horizontal = -speed_vertical + 1
+                elif position == 3 and speed_horizontal == 0:
+                    speed_horizontal = -ZERO_SPEED
+                elif position == 4:
+                    speed_horizontal = speed_vertical
+                speed_vertical = 0
             elif yellow_portal.position == 3:
-                player.rect.x = yellow_portal.rect.x
-                player.rect.y = yellow_portal.rect.y
+                self.rect.x = yellow_portal.rect.x + 1
+                self.rect.y = yellow_portal.rect.y
+                if position == 1 and speed_horizontal == 0:
+                    speed_horizontal = ZERO_SPEED
+                elif position == 3:
+                    if speed_horizontal != 0:
+                        speed_horizontal = -speed_horizontal
+                    else:
+                        speed_horizontal = -ZERO_SPEED
+                elif position == 2:
+                    speed_horizontal = speed_vertical - 1
+                elif position == 4:
+                    speed_horizontal = -speed_vertical
+                speed_vertical = 0
             elif yellow_portal.position == 2:
-                player.rect.x = yellow_portal.rect.x
-                player.rect.y = yellow_portal.rect.y - HEIGHT_CHELL
+                self.rect.y = yellow_portal.rect.y - HEIGHT_CHELL
+                if position == 1:
+                    if speed_horizontal != 0:
+                        speed_vertical = -speed_horizontal
+                    else:
+                        speed_vertical = -ZERO_SPEED
+                    self.rect.x = yellow_portal.rect.x
+                elif position == 2:
+                    speed_vertical = -speed_vertical + 1
+                    self.rect.x = self.rect.x - blue_portal.rect.x + yellow_portal.rect.x
+                elif position == 3:
+                    if speed_horizontal != 0:
+                        speed_vertical = speed_horizontal
+                    else:
+                        speed_vertical = -ZERO_SPEED
+                    self.rect.x = yellow_portal.rect.x
+                elif position == 4:
+                    self.rect.x = self.rect.x - blue_portal.rect.x + yellow_portal.rect.x
+                speed_horizontal = 0
             elif yellow_portal.position == 4:
-                player.rect.x = yellow_portal.rect.x
-                player.rect.y = yellow_portal.rect.y + WIDTH_PORTAL
+                self.rect.y = yellow_portal.rect.y + WIDTH_PORTAL
+                if position == 1:
+                    if speed_horizontal != 0:
+                        speed_vertical = speed_horizontal
+                    else:
+                        speed_vertical = ZERO_SPEED
+                    self.rect.x = yellow_portal.rect.x
+                elif position == 2:
+                    self.rect.x = self.rect.x - blue_portal.rect.x + yellow_portal.rect.x
+                elif position == 3:
+                    if speed_horizontal != 0:
+                        speed_vertical = -speed_horizontal
+                    else:
+                        speed_vertical = ZERO_SPEED
+                    self.rect.x = yellow_portal.rect.x
+                elif position == 4:
+                    speed_vertical = -speed_vertical
+                    self.rect.x = self.rect.x - blue_portal.rect.x + yellow_portal.rect.x
+                speed_horizontal = 0
 
 
 class WallFloorCelling(pygame.sprite.Sprite):
@@ -206,9 +329,9 @@ class Platform(pygame.sprite.Sprite):
             player_top = player.rect.top + speed_vertical
             if player_top > self.rect.y + self.rect.h:
                 if player.rect.left + WIDTH_CHELL < self.rect.x or \
-                    player.rect.left > self.rect.x + self.rect.w:
-                        print(1)
-                        return abs(speed_vertical)
+                        player.rect.left > self.rect.x + self.rect.w:
+                    print(1)
+                    return abs(speed_vertical)
                 if player.rect.top - self.rect.y - self.rect.w > abs(speed_vertical):
                     print(2)
                     return abs(speed_vertical)
@@ -443,7 +566,8 @@ ceiling_group.add(WallFloorCelling(0, 0, WIDTH_SCREEN, 20, 'c', [(20, WIDTH_SCRE
 wall_right = WallFloorCelling(WIDTH_SCREEN - 20, 0, 20, HEIGHT_SCREEN, 'wr', [(20, HEIGHT_SCREEN - 20)])
 floor = WallFloorCelling(0, HEIGHT_SCREEN - 20, WIDTH_SCREEN, 20, 'f', [(20, WIDTH_SCREEN - 20)])
 floor_group.add(floor)
-Platform(200, HEIGHT_SCREEN - 180, 200, 180, 'gray')
+wall_left_group.add(wall_left)
+wall_right_group.add(wall_right)
 player = Player()
 blue_portal = Portal('blue')
 yellow_portal = Portal('yellow')
@@ -466,6 +590,7 @@ clock = pygame.time.Clock()
 clock_svobod_pad = pygame.time.Clock()
 boost_g = 3
 speed_vertical = 0
+speed_horizontal = 0
 flag_jump = True
 one_step = True
 flag_left_step = True
@@ -484,7 +609,7 @@ while running:
                 yellow_portal.click_mouse(event.pos[0] - 25, event.pos[1] - 25, player.rect.left, player.rect.top)
         if event.type == walking_event and pygame.key.get_pressed()[97]:
             dop_step = STEP
-            if pygame.sprite.spritecollideany(wall_left, player_group):
+            if pygame.sprite.spritecollideany(player, wall_left_group):
                 dop_step = player.rect.left - wall_left.rect.w + 25
                 if dop_step > STEP:
                     dop_step %= STEP
@@ -503,10 +628,10 @@ while running:
                 player.update(False, True)
         elif event.type == walking_event and pygame.key.get_pressed()[100]:
             dop_step = STEP
-            if pygame.sprite.spritecollideany(wall_right, player_group):
+            if pygame.sprite.spritecollideany(player, wall_right_group):
                 dop_step = WIDTH_SCREEN - wall_right.rect.w - player.rect.left - 80
                 if dop_step > STEP:
-                    dop_step = STEP
+                    dop_step %= STEP
             else:
                 for i in platform_group:
                     if not pygame.sprite.spritecollideany(i, player_group):
@@ -519,6 +644,12 @@ while running:
                 player.update(True, False)
             else:
                 player.update(True, True)
+        if speed_horizontal < 0 and pygame.sprite.spritecollideany(player, wall_left_group):
+            player.rect.x = wall_left.rect.x - 4
+            speed_horizontal = 0
+        if speed_horizontal > 0 and pygame.sprite.spritecollideany(player, wall_right_group):
+            player.rect.x = wall_right.rect.x - 81
+            speed_horizontal = 0
         if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and pygame.sprite.collide_mask(player, floor):
             speed_vertical = -15
         if event.type == svobod_pad_event:
@@ -527,6 +658,7 @@ while running:
                     player.rect.top += floor.rect.y - player.rect.top - HEIGHT_CHELL + 5
                 else:
                     player.rect.top += speed_vertical
+                    speed_vertical += 1
             elif speed_vertical < 0:
                 dop = abs(speed_vertical)
                 for i in platform_group:
@@ -535,9 +667,11 @@ while running:
                     dop = i.interaction('v')
                     break
                 player.rect.top -= dop
+                speed_vertical += 1
             elif pygame.sprite.collide_mask(player, floor):
                 speed_vertical = 0
-            speed_vertical += 1
+                speed_horizontal = 0
+            player.rect.left += speed_horizontal
         if not pygame.key.get_pressed()[97] and not pygame.key.get_pressed()[100]:
             if pygame.mouse.get_pos()[0] < player.rect.left + WIDTH_CHELL // 2:
                 player.normal(False)
@@ -560,8 +694,10 @@ while running:
                 player.passing_through_portal('blue')
             if pygame.sprite.spritecollideany(player, yellow_portal_group):
                 player.passing_through_portal('yellow')
-    if pygame.sprite.spritecollideany(player, ceiling_group):
-        speed_vertical = 3
+        if pygame.sprite.spritecollideany(player, ceiling_group) and speed_vertical < 0:
+            speed_vertical = 0
+        if speed_vertical > 100:
+            speed_vertical = 100
     screen.fill(pygame.Color("orange"))
     all_sprites.draw(screen)
     if blue_portal.active:
