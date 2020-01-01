@@ -468,18 +468,20 @@ class Portal(pygame.sprite.Sprite):
             return
         if self.construction.group == 'wr':
             self.position = 1
-            self.portal_adjustment_walls(self.image_list[0])
+            self.portal_adjustment_walls(self.construction.group, self.image_list[0])
         elif self.construction.group == 'f':
             self.position = 2
             self.portal_adjustment_floor_ceiling(self.construction.group, self.image_list[1])
         elif self.construction.group == 'wl':
             self.position = 3
-            self.portal_adjustment_walls(self.image_list[2])
+            self.portal_adjustment_walls(self.construction.group, self.image_list[2])
         elif self.construction.group == 'c':
             self.position = 4
             self.portal_adjustment_floor_ceiling(self.construction.group, self.image_list[3])
+        elif self.construction.group == 'p':
+            self.position_on_platform()
 
-    def portal_adjustment_walls(self, image):
+    def portal_adjustment_walls(self, group, image):
         hit_flag = False
         for i in self.construction.interval_list:
             if i[0] <= self.rect.y <= i[1] or i[0] <= self.rect.y + self.rect.h <= i[1]:
@@ -488,7 +490,10 @@ class Portal(pygame.sprite.Sprite):
                 break
         if hit_flag:
             if interval[1] - interval[0] >= HEIGHT_PORTAL:
-                self.rect.x = self.construction.rect.x
+                if group == 'wr':
+                    self.rect.x = self.construction.rect.x
+                elif group == 'wl':
+                    self.rect.x = self.construction.rect.x + self.construction.rect.w - WIDTH_PORTAL
                 self.image = image
                 self.rect.w = WIDTH_PORTAL
                 self.rect.h = HEIGHT_PORTAL
@@ -586,6 +591,29 @@ class Portal(pygame.sprite.Sprite):
             else:
                 self.active = False
 
+    def position_on_platform(self):
+        dx1 = self.rect.x - self.construction.rect.x
+        dx2 = self.construction.rect.x + self.construction.rect.w - self.rect.x - self.rect.w
+        dy1 = self.rect.y - self.construction.rect.y
+        dy2 = self.construction.rect.y + self.construction.rect.h - self.rect.y - self.rect.h
+        dmin = min(dx1, dx2, dy1, dy2)
+        if dx2 == dmin:
+            self.position = 3
+            self.construction.interval_list = self.construction.interval_list_3
+            self.portal_adjustment_walls('wl', self.image_list[2])
+        elif dx1 == dmin:
+            self.position = 1
+            self.construction.interval_list = self.construction.interval_list_1
+            self.portal_adjustment_walls('wr', self.image_list[0])
+        elif dy2 == dmin:
+            self.position = 4
+            self.construction.interval_list = self.construction.interval_list_4
+            self.portal_adjustment_floor_ceiling('c', self.image_list[3])
+        elif dy1 == dmin:
+            self.position = 2
+            self.construction.interval_list = self.construction.interval_list_2
+            self.portal_adjustment_floor_ceiling('f', self.image_list[1])
+
 
 player_group = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
@@ -602,7 +630,7 @@ platform_group = pygame.sprite.Group()
 wall_left = WallFloorCelling(0, 0, 20, HEIGHT_SCREEN, 'grey', 'wl', [(20, HEIGHT_SCREEN - 20)])
 ceiling_group.add(WallFloorCelling(0, 0, WIDTH_SCREEN, 20, 'grey', 'c', [(20, WIDTH_SCREEN - 20)]))
 wall_right = WallFloorCelling(WIDTH_SCREEN - 20, 0, 20, HEIGHT_SCREEN, 'grey', 'wr', [(20, HEIGHT_SCREEN - 20)])
-Platform(200, HEIGHT_SCREEN - 100, 200, 20, 'grey', [600, 620], [200, 400], [600, 620], [200, 400])
+Platform(200, HEIGHT_SCREEN - 300, 200, 100, 'grey', [(400, 500)], [(200, 400)], [(400, 500)], [(200, 400)])
 floor = WallFloorCelling(0, HEIGHT_SCREEN - 20, WIDTH_SCREEN, 20, 'grey', 'f', [(20, WIDTH_SCREEN - 20)])
 floor_group.add(floor)
 wall_left_group.add(wall_left)
