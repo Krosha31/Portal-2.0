@@ -1,6 +1,7 @@
 import pygame
 import os
 
+pygame.init()
 
 HEIGHT_CHELL = WIDTH_CHELL = 100
 WIDTH_SCREEN = HEIGHT_SCREEN = 700
@@ -133,6 +134,8 @@ class Player(pygame.sprite.Sprite):
 
     def teleport(self, color, position):
         global speed_vertical, speed_horizontal
+        teleport_sound = pygame.mixer.Sound('data/teleport_sound.wav')
+        pygame.mixer.Sound.play(teleport_sound)
         if color == 'blue':
             if blue_portal.position == 1:
                 self.rect.x = blue_portal.rect.x - WIDTH_CHELL + 19
@@ -372,8 +375,12 @@ class Portal(pygame.sprite.Sprite):
     def __init__(self, color):
         if color == 'blue':
             super().__init__(blue_portal_group)
+            self.sound_shot = pygame.mixer.Sound('data/blue_shot.wav')
+            self.sound_portal_open = pygame.mixer.Sound('data/blue_open.wav')
         elif color == 'yellow':
             super().__init__(yellow_portal_group)
+            self.sound_shot = pygame.mixer.Sound('data/yellow_shot.wav')
+            self.sound_portal_open = pygame.mixer.Sound('data/yellow_open.wav')
         self.speed = 20
         self.image_list = []
         self.color = color
@@ -418,6 +425,7 @@ class Portal(pygame.sprite.Sprite):
             self.image_list.append(image4)
 
     def click_mouse(self, x_curs, y_curs, x_player, y_player):
+        pygame.mixer.Sound.play(self.sound_shot)
         self.image = self.image0
         self.rect.w = WIDTH_SPHERE
         self.rect.h = HEIGHT_SPHERE
@@ -451,6 +459,7 @@ class Portal(pygame.sprite.Sprite):
         self.rect.y = int(self.y)
 
     def portal_open(self):
+        pygame.mixer.Sound.play(self.sound_portal_open)
         construction_list = pygame.sprite.spritecollide(self, construction_group, False)
         self.construction = construction_list[0]
         if self.construction.color == 'black':
@@ -615,6 +624,10 @@ pygame.time.set_timer(svobod_pad_event, 25)
 pfly_event = 26
 pygame.time.set_timer(pfly_event, 1)
 
+pygame.mixer.music.load('data/background_music.mp3')
+pygame.mixer.music.set_volume(0.5)
+pygame.mixer.music.play(-1)
+
 running = True
 clock = pygame.time.Clock()
 clock_svobod_pad = pygame.time.Clock()
@@ -626,6 +639,8 @@ one_step = True
 flag_left_step = True
 flag_right_step = True
 flag_stand = True
+go_sound = pygame.mixer.Sound('data/go_sound.wav')
+go_sound.set_volume(0.05)
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -639,6 +654,7 @@ while running:
             elif event.button == 3:
                 yellow_portal.click_mouse(event.pos[0] - 25, event.pos[1] - 25, player.rect.left, player.rect.top)
         if event.type == walking_event and pygame.key.get_pressed()[97]:
+            pygame.mixer.Sound.play(go_sound)
             dop_step = STEP
             if pygame.sprite.spritecollideany(player, wall_left_group):
                 dop_step = player.rect.left - wall_left.rect.w + 25
@@ -656,6 +672,7 @@ while running:
             else:
                 player.update(False, True)
         elif event.type == walking_event and pygame.key.get_pressed()[100]:
+            pygame.mixer.Sound.play(go_sound)
             dop_step = STEP
             if pygame.sprite.spritecollideany(player, wall_right_group):
                 dop_step = WIDTH_SCREEN - wall_right.rect.w - player.rect.left - 80
