@@ -320,7 +320,7 @@ class Platform(pygame.sprite.Sprite):
                         player.rect.y > self.rect.y + self.rect.h:
                     return STEP
                 else:
-                    if player.rect.left - self.rect.x - self.rect.w + 25 >= STEP:
+                    if player.rect.left - self.rect.x - self.rect.w + 25 >= STEP or not flag_stand:
                         return STEP
                     return player.rect.left - self.rect.x - self.rect.w + 25
             return STEP
@@ -331,7 +331,7 @@ class Platform(pygame.sprite.Sprite):
                         player.rect.y > self.rect.y + self.rect.h:
                     return STEP
                 else:
-                    if self.rect.x - player_left - WIDTH_CHELL + 40 >= STEP:
+                    if self.rect.x - player_left - WIDTH_CHELL + 40 >= STEP or not flag_stand:
                         return STEP
                     return self.rect.x - player_left - WIDTH_CHELL + 40
             return STEP
@@ -348,7 +348,7 @@ class Platform(pygame.sprite.Sprite):
             return abs(speed_vertical)
         elif side_of_movement == 'n':
             if player.rect.top + HEIGHT_CHELL < self.rect.y:
-                if player.rect.left + WIDTH_CHELL - 25 < self.rect.x or \
+                if player.rect.left + WIDTH_CHELL * 25 < self.rect.x or \
                         player.rect.left + 25 > self.rect.x + self.rect.w:
                     flag_stand = True
                     return speed_vertical
