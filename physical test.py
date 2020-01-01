@@ -9,7 +9,7 @@ HEIGHT_PORTAL = 100
 WIDTH_PORTAL = 20
 HEIGHT_SPHERE = WIDTH_SPHERE = 16
 STEP = 20
-ZERO_SPEED = 0
+ZERO_SPEED = 5
 screen = pygame.display.set_mode(size)
 
 
@@ -26,7 +26,7 @@ def load_image(name, colorkey=None):
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, x=350, y=0):
+    def __init__(self, x=350, y=50):
         super().__init__(player_group)
         self.left_frames = []
         self.right_frames = []
@@ -278,28 +278,41 @@ class Player(pygame.sprite.Sprite):
 
 
 class WallFloorCelling(pygame.sprite.Sprite):
-    def __init__(self, x, y, w, h, group, interval_list):
+    def __init__(self, x, y, w, h, color, group, interval_list):
         super().__init__(all_sprites, construction_group)
-        self.image = load_image('floor.png')
+        if color == 'grey':
+            self.image = load_image('grey.png')
+        elif color == 'black':
+            self.image = load_image('black.png')
         self.image = pygame.transform.scale(self.image, (w, h))
         self.mask = pygame.mask.from_surface(self.image)
         self.group = group
+        self.color = color
         self.interval_list = interval_list
         self.rect = self.image.get_rect()
         self.rect = self.rect.move(x, y)
 
 
 class Platform(pygame.sprite.Sprite):
-    def __init__(self, x, y, w, h, color):
+    def __init__(self, x, y, w, h, color, interval_list_1, interval_list_2, interval_list_3, interval_list_4):
         super().__init__(all_sprites, construction_group, platform_group)
-        self.image = load_image('floor.png')
+        if color == 'grey':
+            self.image = load_image('grey.png')
+        elif color == 'black':
+            self.image = load_image('black.png')
         self.image = pygame.transform.scale(self.image, (w, h))
         self.mask = pygame.mask.from_surface(self.image)
+        self.color = color
+        self.group = 'p'
+        self.interval_list_1 = interval_list_1
+        self.interval_list_2 = interval_list_2
+        self.interval_list_3 = interval_list_3
+        self.interval_list_4 = interval_list_4
         self.rect = self.image.get_rect()
         self.rect = self.rect.move(x, y)
 
     def interaction(self, side_of_movement):
-        global flag_left_step, flag_right_step, speed_vertical
+        global speed_vertical, flag_stand
         if side_of_movement == 'l':
             player_left = player.rect.left - STEP
             if self.rect.x + self.rect.w < player_left + WIDTH_CHELL:
@@ -309,7 +322,6 @@ class Platform(pygame.sprite.Sprite):
                 else:
                     if player.rect.left - self.rect.x - self.rect.w + 25 >= STEP:
                         return STEP
-                    print(player.rect.left - self.rect.x - self.rect.w + 25)
                     return player.rect.left - self.rect.x - self.rect.w + 25
             return STEP
         elif side_of_movement == 'r':
@@ -321,26 +333,39 @@ class Platform(pygame.sprite.Sprite):
                 else:
                     if self.rect.x - player_left - WIDTH_CHELL + 40 >= STEP:
                         return STEP
-                    if speed_vertical == 0:
-                        flag_right_step = False
                     return self.rect.x - player_left - WIDTH_CHELL + 40
             return STEP
         elif side_of_movement == 'v':
-            player_top = player.rect.top + speed_vertical
-            if player_top > self.rect.y + self.rect.h:
-                if player.rect.left + WIDTH_CHELL < self.rect.x or \
-                        player.rect.left > self.rect.x + self.rect.w:
-                    print(1)
+            if player.rect.top > self.rect.y + self.rect.h:
+                if player.rect.left + WIDTH_CHELL - 25 < self.rect.x or \
+                        player.rect.left + 25 > self.rect.x + self.rect.w:
                     return abs(speed_vertical)
-                if player.rect.top - self.rect.y - self.rect.w > abs(speed_vertical):
-                    print(2)
+                if player.rect.top - self.rect.y - self.rect.h + 9 > abs(speed_vertical):
                     return abs(speed_vertical)
                 else:
                     speed_vertical = 3
-                    print(3)
-                    return player.rect.top - self.rect.y - self.rect.w
-            print(4)
+                    return player.rect.top - self.rect.y - self.rect.h + 9
             return abs(speed_vertical)
+        elif side_of_movement == 'n':
+            if player.rect.top + HEIGHT_CHELL < self.rect.y:
+                if player.rect.left + WIDTH_CHELL - 25 < self.rect.x or \
+                        player.rect.left + 25 > self.rect.x + self.rect.w:
+                    flag_stand = True
+                    return speed_vertical
+                elif self.rect.y - player.rect.top - HEIGHT_CHELL - 9 > speed_vertical:
+                    return speed_vertical
+                else:
+                    flag_stand = False
+                    speed_vertical = 0
+                    return self.rect.y - player.rect.top - HEIGHT_CHELL + 9
+            return speed_vertical
+
+    def stand_or_not_stand(self):
+        if player.rect.left + WIDTH_CHELL - 25 < self.rect.x or \
+                player.rect.left + 25 > self.rect.x + self.rect.w or self.rect.y - player.rect.top - HEIGHT_CHELL + 9:
+            return True
+        else:
+            return flag_stand
 
 
 class Portal(pygame.sprite.Sprite):
@@ -428,6 +453,10 @@ class Portal(pygame.sprite.Sprite):
     def portal_open(self):
         construction_list = pygame.sprite.spritecollide(self, construction_group, False)
         self.construction = construction_list[0]
+        if self.construction.color == 'black':
+            self.active = False
+            self.position = 0
+            return
         if self.construction.group == 'wr':
             self.position = 1
             self.portal_adjustment_walls(self.image_list[0])
@@ -561,10 +590,11 @@ blue_portal_group = pygame.sprite.Group()
 yellow_portal_group = pygame.sprite.Group()
 platform_group = pygame.sprite.Group()
 
-wall_left = WallFloorCelling(0, 0, 20, HEIGHT_SCREEN, 'wl', [(20, HEIGHT_SCREEN - 20)])
-ceiling_group.add(WallFloorCelling(0, 0, WIDTH_SCREEN, 20, 'c', [(20, WIDTH_SCREEN - 20)]))
-wall_right = WallFloorCelling(WIDTH_SCREEN - 20, 0, 20, HEIGHT_SCREEN, 'wr', [(20, HEIGHT_SCREEN - 20)])
-floor = WallFloorCelling(0, HEIGHT_SCREEN - 20, WIDTH_SCREEN, 20, 'f', [(20, WIDTH_SCREEN - 20)])
+wall_left = WallFloorCelling(0, 0, 20, HEIGHT_SCREEN, 'grey', 'wl', [(20, HEIGHT_SCREEN - 20)])
+ceiling_group.add(WallFloorCelling(0, 0, WIDTH_SCREEN, 20, 'grey', 'c', [(20, WIDTH_SCREEN - 20)]))
+wall_right = WallFloorCelling(WIDTH_SCREEN - 20, 0, 20, HEIGHT_SCREEN, 'grey', 'wr', [(20, HEIGHT_SCREEN - 20)])
+Platform(200, HEIGHT_SCREEN - 100, 200, 20, 'grey', [600, 620], [200, 400], [600, 620], [200, 400])
+floor = WallFloorCelling(0, HEIGHT_SCREEN - 20, WIDTH_SCREEN, 20, 'grey', 'f', [(20, WIDTH_SCREEN - 20)])
 floor_group.add(floor)
 wall_left_group.add(wall_left)
 wall_right_group.add(wall_right)
@@ -589,12 +619,13 @@ running = True
 clock = pygame.time.Clock()
 clock_svobod_pad = pygame.time.Clock()
 boost_g = 3
-speed_vertical = 0
+speed_vertical = 1
 speed_horizontal = 0
 flag_jump = True
 one_step = True
 flag_left_step = True
 flag_right_step = True
+flag_stand = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -618,10 +649,8 @@ while running:
                     if not pygame.sprite.spritecollideany(i, player_group):
                         break
                     dop_step = i.interaction('l')
-                    print(dop_step)
                     break
             player.rect.left -= dop_step
-            flag_right_step = True
             if player.rect.left + WIDTH_CHELL // 2 - pygame.mouse.get_pos()[0] > 0:
                 player.update(False, False)
             else:
@@ -639,7 +668,6 @@ while running:
                     dop_step = i.interaction('r')
                     break
             player.rect.left += dop_step
-            flag_left_step = True
             if player.rect.left + WIDTH_CHELL // 2 - pygame.mouse.get_pos()[0] > 0:
                 player.update(True, False)
             else:
@@ -650,20 +678,26 @@ while running:
         if speed_horizontal > 0 and pygame.sprite.spritecollideany(player, wall_right_group):
             player.rect.x = wall_right.rect.x - 81
             speed_horizontal = 0
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and pygame.sprite.collide_mask(player, floor):
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and \
+                (pygame.sprite.collide_mask(player, floor) or not flag_stand):
             speed_vertical = -15
         if event.type == svobod_pad_event:
             if not pygame.sprite.collide_mask(player, floor) and speed_vertical >= 0:
                 if floor.rect.y - player.rect.top - HEIGHT_CHELL < speed_vertical:
                     player.rect.top += floor.rect.y - player.rect.top - HEIGHT_CHELL + 5
                 else:
-                    player.rect.top += speed_vertical
-                    speed_vertical += 1
+                    dop = speed_vertical
+                    for i in platform_group:
+                        dop = i.interaction('n')
+                        break
+                    player.rect.top += dop
+                    for i in platform_group:
+                        flag_stand = i.stand_or_not_stand()
+                    if flag_stand:
+                        speed_vertical += 1
             elif speed_vertical < 0:
                 dop = abs(speed_vertical)
                 for i in platform_group:
-                    if not pygame.sprite.spritecollideany(i, player_group):
-                        break
                     dop = i.interaction('v')
                     break
                 player.rect.top -= dop
