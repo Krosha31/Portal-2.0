@@ -9,6 +9,7 @@ WIDTH_SCREEN = HEIGHT_SCREEN = 700
 size = WIDTH_SCREEN, HEIGHT_SCREEN
 HEIGHT_PORTAL = 100
 WIDTH_PORTAL = 20
+WIDTH_WIRE = HEIGHT_WIRE = 100
 HEIGHT_SPHERE = WIDTH_SPHERE = 16
 STEP = 20
 ZERO_SPEED = 5
@@ -300,6 +301,35 @@ class Player(pygame.sprite.Sprite):
                 speed_horizontal = 0
 
 
+class Wire(pygame.sprite.Sprite):
+    def __init__(self, x, y, pos):
+        super().__init__(all_sprites, wire_proup)
+        self.image_list = []
+        if pos == 'ver':
+            image1 = load_image('wire_ver_off.png', -1)
+            image1 = pygame.transform.scale(image1, (WIDTH_WIRE, HEIGHT_WIRE))
+            self.image_list.append(image1)
+            image2 = load_image('wire_ver_on.png', -1)
+            image2 = pygame.transform.scale(image2, (WIDTH_WIRE, HEIGHT_WIRE))
+            self.image_list.append(image2)
+        elif pos == 'hor':
+            image1 = load_image('wire_hor_off.png', -1)
+            image1 = pygame.transform.scale(image1, (WIDTH_WIRE, HEIGHT_WIRE))
+            self.image_list.append(image1)
+            image2 = load_image('wire_hor_on.png', -1)
+            image2 = pygame.transform.scale(image2, (WIDTH_WIRE, HEIGHT_WIRE))
+            self.image_list.append(image2)
+        self.image = self.image_list[0]
+        self.rect = self.image.get_rect()
+        self.rect = self.rect.move(x, y)
+
+    def wire_on(self):
+        self.image = self.image_list[1]
+
+    def wire_off(self):
+        self.image = self.image_list[0]
+
+
 class WallFloorCelling(pygame.sprite.Sprite):
     def __init__(self, x, y, w, h, color, group, interval_list):
         super().__init__(all_sprites, construction_group)
@@ -317,12 +347,22 @@ class WallFloorCelling(pygame.sprite.Sprite):
 
 
 class Platform(pygame.sprite.Sprite):
-    def __init__(self, x, y, w, h, color, interval_list_1, interval_list_2, interval_list_3, interval_list_4):
-        super().__init__(all_sprites, construction_group, platform_group)
-        if color == 'grey':
-            self.image = load_image('grey.png')
-        elif color == 'black':
-            self.image = load_image('black.png')
+    def __init__(self, x, y, w, h, color, interval_list_1, interval_list_2, interval_list_3, interval_list_4, type='n'):
+        if type == 'n':
+            super().__init__(all_sprites, construction_group, platform_group)
+            if color == 'grey':
+                self.image = load_image('grey.png')
+            elif color == 'black':
+                self.image = load_image('black.png')
+        elif type == 'door':
+            super().__init__(construction_group, platform_group, door_group)
+            color = 'black'
+            w = 19
+            h = 100
+            self.image = load_image('door.gif')
+            self.pos = False
+            self.y = y
+            self.speed = 10
         self.image = pygame.transform.scale(self.image, (w, h))
         self.mask = pygame.mask.from_surface(self.image)
         self.color = color
@@ -395,6 +435,18 @@ class Platform(pygame.sprite.Sprite):
             return True
         else:
             return False
+
+    def door_open(self):
+        self.rect.y -= self.speed
+        if self.y - self.rect.y >= self.rect.h:
+            self.pos = True
+            self.rect.y = self.y - self.rect.h
+
+    def door_close(self):
+        self.rect.y += self.speed
+        if self.y - self.rect.y <= 0:
+            self.pos = False
+            self.rect.y = self.y
 
 
 class Portal(pygame.sprite.Sprite):
@@ -652,12 +704,17 @@ construction_group = pygame.sprite.Group()
 blue_portal_group = pygame.sprite.Group()
 yellow_portal_group = pygame.sprite.Group()
 platform_group = pygame.sprite.Group()
+door_group = pygame.sprite.Group()
+wire_proup = pygame.sprite.Group()
 
-wall_left = WallFloorCelling(0, 0, 20, HEIGHT_SCREEN, 'grey', 'wl', [(20, HEIGHT_SCREEN - 20)])
+wall_left = WallFloorCelling(0, 0, 20, HEIGHT_SCREEN - 120, 'grey', 'wl', [(20, HEIGHT_SCREEN - 120)])
 ceiling_group.add(WallFloorCelling(0, 0, WIDTH_SCREEN, 20, 'grey', 'c', [(20, WIDTH_SCREEN - 20)]))
 wall_right = WallFloorCelling(WIDTH_SCREEN - 20, 0, 20, HEIGHT_SCREEN, 'grey', 'wr', [(20, HEIGHT_SCREEN - 20)])
 Platform(100, HEIGHT_SCREEN - 300, 200, 100, 'grey', [(400, 500)], [(100, 300)], [(400, 500)], [(100, 300)])
 Platform(400, HEIGHT_SCREEN - 300, 200, 100, 'grey', [(400, 500)], [(400, 600)], [(400, 500)], [(400, 600)])
+door = Platform(0, 580, 0, 0, '', [], [], [], [], 'door')
+Wire(100, 100, 'ver')
+Wire(160, 140, 'hor')
 floor = WallFloorCelling(0, HEIGHT_SCREEN - 20, WIDTH_SCREEN, 20, 'grey', 'f', [(20, WIDTH_SCREEN - 20)])
 floor_group.add(floor)
 wall_left_group.add(wall_left)
@@ -678,6 +735,8 @@ svobod_pad_event = 24
 pygame.time.set_timer(svobod_pad_event, 25)
 pfly_event = 26
 pygame.time.set_timer(pfly_event, 1)
+door_event = 23
+pygame.time.set_timer(door_event, 1)
 
 pygame.mixer.music.load('data/background_music.mp3')
 pygame.mixer.music.set_volume(0.5)
@@ -696,6 +755,7 @@ one_step = True
 flag_left_step = True
 flag_right_step = True
 flag_stand = True
+flag_door = False
 go_sound = pygame.mixer.Sound('data/go_sound.wav')
 go_sound.set_volume(0.05)
 while running:
@@ -708,8 +768,10 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 blue_portal.click_mouse(event.pos[0] - 25, event.pos[1] - 25, player.rect.left, player.rect.top)
+                flag_door = True
             elif event.button == 3:
                 yellow_portal.click_mouse(event.pos[0] - 25, event.pos[1] - 25, player.rect.left, player.rect.top)
+                flag_door = False
         if event.type == walking_event and pygame.key.get_pressed()[97]:
             pygame.mixer.Sound.play(go_sound)
             dop_step = STEP
@@ -764,6 +826,15 @@ while running:
                 (pygame.sprite.collide_mask(player, floor) or not flag_stand):
             flag_stand = True
             speed_vertical = -15
+        if event.type == door_event:
+            if flag_door and not door.pos:
+                door.door_open()
+                for i in wire_proup:
+                    i.wire_on()
+            if not flag_door and door.pos:
+                for i in wire_proup:
+                    i.wire_off()
+                door.door_close()
         if event.type == svobod_pad_event:
             if not pygame.sprite.collide_mask(player, floor) and speed_vertical >= 0:
                 if floor.rect.y - player.rect.top - HEIGHT_CHELL < speed_vertical:
@@ -846,7 +917,10 @@ while running:
             speed_vertical = 0
         if speed_vertical > 100:
             speed_vertical = 100
+    if player.rect.x + WIDTH_CHELL < 25 or player.rect.x > WIDTH_SCREEN - 25:
+        running = False
     screen.fill(pygame.Color("orange"))
+    door_group.draw(screen)
     all_sprites.draw(screen)
     if blue_portal.active:
         blue_portal_group.draw(screen)
