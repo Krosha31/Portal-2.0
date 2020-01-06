@@ -1,4 +1,5 @@
 import sys
+import pygame
 from PyQt5 import uic
 from PyQt5.QtCore import Qt
 from PyQt5.Qt import QSize, QPixmap
@@ -7,10 +8,17 @@ from PyQt5.QtWidgets import QApplication, QPushButton, QMainWindow, \
 from PyQt5.QtGui import QColor, QImage, QPalette, QBrush, QIcon, QPixmap
 
 
+pygame.init()
+pygame.mixer.music.load('data/background_music.mp3')
+pygame.mixer.music.set_volume(0.5)
+pygame.mixer.music.play(-1)
+
+
 class LevelsWindow(QWidget):
     def __init__(self):
         super().__init__()
         uic.loadUi("data/LevelsWindow.ui", self)
+        self.click_sound = pygame.mixer.Sound('data/click_sound.wav')
         self.initUI()
 
     def initUI(self):
@@ -70,11 +78,13 @@ class LevelsWindow(QWidget):
         self.setPalette(palette)
 
     def return_in_menu(self):
+        pygame.mixer.Sound.play(self.click_sound)
         self.window = MainWindow()
         self.window.show()
         self.close()
 
     def load_level(self):
+        pygame.mixer.Sound.play(self.click_sound)
         name = self.sender().text()[-1]
         # Запуск уровня name
         pass
@@ -84,6 +94,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         uic.loadUi("data/MenuWindow.ui", self)
+        self.click_sound = pygame.mixer.Sound('data/click_sound.wav')
         self.initUI()
 
     def initUI(self):
@@ -124,19 +135,23 @@ class MainWindow(QMainWindow):
         self.pushButton_4.clicked.connect(self.quit)
 
     def game_start(self):
+        pygame.mixer.Sound.play(self.click_sound)
         # Запуск игры с самого начала (со сбросом предыдущего прогресса)
         pass
 
     def game_continue(self):
+        pygame.mixer.Sound.play(self.click_sound)
         # Продолжение игры
         pass
 
     def levels(self):
+        pygame.mixer.Sound.play(self.click_sound)
         self.window = LevelsWindow()
         self.window.show()
         self.close()
 
     def quit(self):
+        pygame.mixer.Sound.play(self.click_sound)
         self.close()
 
     def set_background(self):
