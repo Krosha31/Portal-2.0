@@ -484,7 +484,7 @@ class Platform(pygame.sprite.Sprite):
         self.rect = self.rect.move(x, y)
 
     def interaction(self, side_of_movement, step=STEP):
-        global speed_vertical, flag_stand, speed_horizontal, speed_ver_rez, speed_hor_rez
+        global speed_vertical, flag_stand, speed_horizontal, speed_ver_rez, speed_hor_rez, HEIGHT_CHELL
         if side_of_movement == 'l':
             if self.rect.x + self.rect.w < player.rect.left - player_left_cube + WIDTH_CHELL + player_right_cube - 25:
                 if player.rect.top + HEIGHT_CHELL < self.rect.y or \
@@ -524,22 +524,28 @@ class Platform(pygame.sprite.Sprite):
                     return player.rect.top - self.rect.y - self.rect.h + 9
             return None
         elif side_of_movement == 'n':
-            if player.rect.top + HEIGHT_CHELL - 20 < self.rect.y:
+            if player.rect.top + HEIGHT_CHELL - 30 < self.rect.y:
                 if player.rect.left - player_left_cube + WIDTH_CHELL + player_right_cube - 25 < self.rect.x or \
                         player.rect.left - player_left_cube + 30 > self.rect.x + self.rect.w:
                     return None
-                elif self.rect.y - player.rect.top - HEIGHT_CHELL + 9 > speed_vertical:
+                if (player.rect.left + WIDTH_CHELL - 25 < self.rect.x or
+                    player.rect.left + 30 > self.rect.x + self.rect.w) and not cube.position:
+                    HEIGHT_CHELL -= 15
+                if self.rect.y - player.rect.top - HEIGHT_CHELL + 9 > speed_vertical:
+                    HEIGHT_CHELL = 100
                     return None
                 else:
                     speed_ver_rez = speed_vertical
                     speed_hor_rez = speed_horizontal
                     speed_vertical = 0
                     speed_horizontal = 0
-                    return self.rect.y - player.rect.top - HEIGHT_CHELL + 9
+                    dop = HEIGHT_CHELL
+                    HEIGHT_CHELL = 100
+                    return self.rect.y - player.rect.top - dop + 9
             return None
 
     def interaction_cube(self):
-        global speed_vertical_cube, flag_stand, speed_horizontal_cube, speed_ver_rez_cube, speed_hor_rez_cube
+        global speed_vertical_cube, flag_stand, speed_horizontal_cube, speed_ver_rez, speed_hor_rez
         if cube.rect.top + HEIGHT_CUBE < self.rect.y:
             if cube.rect.left + WIDTH_CUBE < self.rect.x or \
                     cube.rect.left > self.rect.x + self.rect.w:
@@ -547,8 +553,6 @@ class Platform(pygame.sprite.Sprite):
             elif self.rect.y - cube.rect.top - HEIGHT_CUBE > speed_vertical_cube:
                 return None
             else:
-                speed_ver_rez_cube = speed_vertical_cube
-                speed_hor_rez_cube = speed_horizontal_cube
                 speed_vertical_cube = 0
                 speed_horizontal_cube = 0
                 return self.rect.y - cube.rect.top - HEIGHT_CUBE
@@ -640,18 +644,17 @@ class Cube(pygame.sprite.Sprite):
                     return player.rect.left - self.rect.x - self.rect.w + 25
             return None
         elif side_of_movement == 'r':
-            player_left = player.rect.left + step
-            if self.rect.x > player_left:
+            if self.rect.x > player.rect.left - player_left_cube + 25:
                 if player.rect.top + HEIGHT_CHELL < self.rect.y or \
                         player.rect.y > self.rect.y + self.rect.h:
                     return None
                 else:
-                    if self.rect.x - player_left - WIDTH_CHELL + 40 >= STEP or \
+                    if self.rect.x - player.rect.left + player_left_cube - WIDTH_CHELL - player_right_cube + 25 >= step or \
                             player.rect.top + HEIGHT_CHELL - HEIGHT_CHELL // 4 < self.rect.y:
                         return None
                     speed_hor_rez = speed_horizontal
                     speed_horizontal = 0
-                    return self.rect.x - player_left - WIDTH_CHELL + 40
+                    return self.rect.x - player.rect.left + player_left_cube - WIDTH_CHELL - player_right_cube + 25
             return None
         elif side_of_movement == 'v':
             if player.rect.top > self.rect.y + self.rect.h:
@@ -841,36 +844,35 @@ class Button(pygame.sprite.Sprite):
         self.cube_at_the_top = False
 
     def interaction(self, side_of_movement, step=STEP):
-        global speed_vertical, flag_stand, speed_horizontal, speed_ver_rez, speed_hor_rez
-        if not self.player_at_the_top and not self.cube_at_the_top:
+        global speed_vertical, flag_stand, speed_horizontal, speed_ver_rez, speed_hor_rez, HEIGHT_CHELL
+        if not self.player_at_the_top and not self.cube_at_the_top or not self.player_at_the_top and not cube.position:
             self.disable_button()
         if side_of_movement == 'l':
-            player_left = player.rect.left - step
-            if self.rect.x + self.rect.w < player_left + WIDTH_CHELL:
+            if self.rect.x + self.rect.w < player.rect.left - player_left_cube + WIDTH_CHELL + player_right_cube:
                 if player.rect.top + HEIGHT_CHELL < self.rect.y or \
                         player.rect.y > self.rect.y + self.rect.h:
                     return None
                 else:
-                    if player.rect.left - self.rect.x - self.rect.w + 25 >= step or \
+                    if player.rect.left - player_left_cube - self.rect.x - self.rect.w + 25 >= step or \
                             player.rect.top + HEIGHT_CHELL - HEIGHT_CHELL // 4 < self.rect.y:
                         return None
                     speed_hor_rez = speed_horizontal
                     speed_horizontal = 0
-                    return player.rect.left - self.rect.x - self.rect.w + 25
+                    return player.rect.left - player_left_cube - self.rect.x - self.rect.w + 25
             return None
         elif side_of_movement == 'r':
-            player_left = player.rect.left + step
-            if self.rect.x > player_left:
+            if self.rect.x > player.rect.left:
                 if player.rect.top + HEIGHT_CHELL < self.rect.y or \
                         player.rect.y > self.rect.y + self.rect.h:
                     return None
                 else:
-                    if self.rect.x - player_left - WIDTH_CHELL + 40 >= STEP or \
+                    if self.rect.x - (
+                            player.rect.left - player_left_cube + WIDTH_CHELL + player_right_cube) + 40 >= STEP or \
                             player.rect.top + HEIGHT_CHELL - HEIGHT_CHELL // 4 < self.rect.y:
                         return None
                     speed_hor_rez = speed_horizontal
                     speed_horizontal = 0
-                    return self.rect.x - player_left - WIDTH_CHELL + 40
+                    return self.rect.x - (player.rect.left - player_left_cube + WIDTH_CHELL + player_right_cube) + 40
             return None
         elif side_of_movement == 'v':
             if player.rect.top > self.rect.y + self.rect.h:
@@ -885,13 +887,17 @@ class Button(pygame.sprite.Sprite):
                     return player.rect.top - self.rect.y - self.rect.h + 9
             return None
         elif side_of_movement == 'n':
-            if player.rect.top + HEIGHT_CHELL - 20 < self.rect.y:
-                if player.rect.left + WIDTH_CHELL - 25 < self.rect.x or \
-                        player.rect.left + 25 > self.rect.x + self.rect.w:
+            if player.rect.top + HEIGHT_CHELL - 30 < self.rect.y:
+                if player.rect.left - player_left_cube + WIDTH_CHELL + player_right_cube - 25 < self.rect.x or \
+                        player.rect.left - player_left_cube + 25 > self.rect.x + self.rect.w:
                     self.player_at_the_top = False
                     return None
-                elif self.rect.y - player.rect.top - HEIGHT_CHELL + 9 > speed_vertical:
+                if (player.rect.left + WIDTH_CHELL - 25 < self.rect.x or
+                    player.rect.left + 30 > self.rect.x + self.rect.w) and not cube.position:
+                    HEIGHT_CHELL -= 15
+                if self.rect.y - player.rect.top - HEIGHT_CHELL + 9 > speed_vertical:
                     self.player_at_the_top = False
+                    HEIGHT_CHELL = 100
                     return None
                 else:
                     speed_ver_rez = speed_vertical
@@ -900,12 +906,16 @@ class Button(pygame.sprite.Sprite):
                     speed_horizontal = 0
                     self.player_at_the_top = True
                     self.activate_button()
-                    return self.rect.y - player.rect.top - HEIGHT_CHELL + 9
+                    dop = HEIGHT_CHELL
+                    HEIGHT_CHELL = 100
+                    return self.rect.y - player.rect.top - dop + 9
             return None
 
     def interaction_cube(self):
         global speed_vertical_cube, flag_stand, speed_horizontal_cube, speed_ver_rez, speed_hor_rez
         if not self.player_at_the_top and not self.cube_at_the_top:
+            self.disable_button()
+        if not self.player_at_the_top:
             self.disable_button()
         if cube.rect.top < self.rect.y:
             if cube.rect.left + WIDTH_CUBE < self.rect.x or \
@@ -1300,17 +1310,31 @@ while running:
                 yellow_portal.click_mouse(event.pos[0] - 25, event.pos[1] - 25, player.rect.left, player.rect.top)
         if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
             if pygame.sprite.spritecollideany(player, cube_group) and cube.position:
-                if player.rect.top - HEIGHT_CHELL // 2 < cube.rect.y:
+                if player.rect.top + HEIGHT_CHELL // 2 > cube.rect.y:
                     if player.rect.left < cube.rect.left:
                         cube.rect.left = player.rect.left + WIDTH_CHELL - 25
                         cube.rect.top = player.rect.top + 6
                         player_right_cube = 70
+                        for button in button_group:
+                            button.interaction_cube()
+                            if button.activated:
+                                button.disable_button()
+                                dop = button.rect.y - player.rect.top - HEIGHT_CHELL + 9
+                                player.rect.top += dop
+                                cube.rect.top += dop
                         cube.position = False
                     else:
                         cube.rect.left = player.rect.left - WIDTH_CUBE + 25
                         cube.rect.top = player.rect.top + 6
                         player_left_cube = 70
                         player_right_cube = 70
+                        for button in button_group:
+                            button.interaction_cube()
+                            if button.activated:
+                                button.disable_button()
+                                dop = button.rect.y - player.rect.top - HEIGHT_CHELL + 9
+                                player.rect.top += dop
+                                cube.rect.top += dop
                         cube.position = False
             elif not cube.position:
                 cube.position = True
@@ -1347,6 +1371,8 @@ while running:
                             break
             if not cube.position:
                 cube.rect.left -= dop_step
+            for button in button_group:
+                button.interaction('n')
             player.rect.left -= dop_step
             if player.rect.left + WIDTH_CHELL // 2 - pygame.mouse.get_pos()[0] > 0:
                 player.update(False, False)
@@ -1391,6 +1417,8 @@ while running:
                             break
             if not cube.position:
                 cube.rect.left += dop_step
+            for button in button_group:
+                button.interaction('n')
             player.rect.left += dop_step
             if player.rect.left + WIDTH_CHELL // 2 - pygame.mouse.get_pos()[0] > 0:
                 player.update(True, False)
