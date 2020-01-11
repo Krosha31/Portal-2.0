@@ -447,7 +447,7 @@ class WallFloorCelling(pygame.sprite.Sprite):
 
 
 class Platform(pygame.sprite.Sprite):
-    def __init__(self, x, y, w, h, color, int_list_1, int_list_2, int_list_3, int_list_4, p_type='n', act_list_len=0):
+    def __init__(self, x, y, w, h, color, int_sp_1, int_sp_2, int_sp_3, int_sp_4, p_type='n', act_list_l=0, speed_k=1):
         if p_type == 'n':
             super().__init__(all_sprites, construction_group, platform_group)
             if color == 'grey':
@@ -468,17 +468,18 @@ class Platform(pygame.sprite.Sprite):
             self.image = load_image('black.png')
             self.w = w
             self.h = h
-        self.activated_list = [False] * act_list_len
-        self.activated_list_len = act_list_len
+        self.activated_list = [False] * act_list_l
+        self.activated_list_len = act_list_l
         self.p_type = p_type
+        self.speed_k = speed_k
         self.image = pygame.transform.scale(self.image, (w, h))
         self.mask = pygame.mask.from_surface(self.image)
         self.color = color
         self.group = 'p'
-        self.interval_list_1 = int_list_1
-        self.interval_list_2 = int_list_2
-        self.interval_list_3 = int_list_3
-        self.interval_list_4 = int_list_4
+        self.interval_list_1 = int_sp_1
+        self.interval_list_2 = int_sp_2
+        self.interval_list_3 = int_sp_3
+        self.interval_list_4 = int_sp_4
         self.rect = self.image.get_rect()
         self.rect = self.rect.move(x, y)
 
@@ -572,9 +573,14 @@ class Platform(pygame.sprite.Sprite):
 
     def thing_on(self):
         if self.p_type == 'door':
-            self.rect.y -= self.speed
-            if self.y - self.rect.y >= self.rect.h:
-                self.rect.y = self.y - self.rect.h
+            if self.speed_k:
+                self.rect.y -= self.speed
+                if self.y - self.rect.y >= self.rect.h:
+                    self.rect.y = self.y - self.rect.h
+            else:
+                self.rect.y += self.speed
+                if self.rect.y - self.y >= self.rect.h:
+                    self.rect.y = self.y + self.rect.h
         elif self.p_type == 'hameleon':
             self.color = 'grey'
             self.image = load_image('grey.png')
@@ -582,9 +588,14 @@ class Platform(pygame.sprite.Sprite):
 
     def thing_off(self):
         if self.p_type == 'door':
-            self.rect.y += self.speed
-            if self.y - self.rect.y <= 0:
-                self.rect.y = self.y
+            if self.speed_k:
+                self.rect.y += self.speed
+                if self.y - self.rect.y <= 0:
+                    self.rect.y = self.y
+            else:
+                self.rect.y -= self.speed
+                if self.y - self.rect.y >= 0:
+                    self.rect.y = self.y
         elif self.p_type == 'hameleon':
             self.color = 'black'
             self.image = load_image('black.png')
@@ -1209,8 +1220,8 @@ hameleon = Platform(160, 400, 200, 100, 'grey', [(400, 500)], [(160, 360)], [(40
 Platform(360, 300, 180, 100, 'grey', [(300, 400)], [(360, 540)], [(300, 400)], [(360, 540)])
 cube = Cube(220, 100)
 door_1 = Platform(0, 580, 0, 0, '', [], [], [], [], 'door', 1)
-door_2 = Platform(680, 580, 0, 0, '', [], [], [], [], 'door', 1)
-door_3 = Platform(0, 20, 0, 0, '', [], [], [], [], 'door', 2)
+door_2 = Platform(681, 580, 0, 0, '', [], [], [], [], 'door', 1)
+door_3 = Platform(0, 20, 0, 0, '', [], [], [], [], 'door', 2, 0)
 floor = WallFloorCelling(0, HEIGHT_SCREEN - 20, WIDTH_SCREEN, 20, 'grey', 'f', [(20, 680)])
 floor_group.add(floor)
 wall_left_group.add(wall_left)
