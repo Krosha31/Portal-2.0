@@ -461,7 +461,7 @@ class Platform(pygame.sprite.Sprite):
             h = 100
             self.image = load_image('door.gif')
             self.y = y
-            self.speed = 10
+            self.speed = 1
         elif p_type == 'hameleon':
             super().__init__(all_sprites, construction_group, platform_group)
             color = 'black'
@@ -819,7 +819,7 @@ class Cube(pygame.sprite.Sprite):
 
 
 class Button(pygame.sprite.Sprite):
-    def __init__(self, x, y, control_thing, wire_list, thing_arg):
+    def __init__(self, x, y, control_thing, wire_list, thing_arg, main_button=False):
         super().__init__(all_sprites, button_group, construction_group)
         self.image = load_image('button.gif')
         self.x = x
@@ -827,6 +827,11 @@ class Button(pygame.sprite.Sprite):
         self.control_thing = control_thing
         self.wire_list = wire_list
         self.thing_arg = thing_arg
+        self.main_button = main_button
+        self.door_sound = pygame.mixer.Sound('data/open_door_sound.wav')
+        self.door_sound.set_volume(0.4)
+        self.button_sound = pygame.mixer.Sound('data/click_sound.wav')
+        self.button_sound.set_volume(0.4)
         self.color = 'black'
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
@@ -902,8 +907,6 @@ class Button(pygame.sprite.Sprite):
         global speed_vertical_cube, flag_stand, speed_horizontal_cube, speed_ver_rez, speed_hor_rez
         if not self.player_at_the_top and not self.cube_at_the_top:
             self.disable_button()
-        if not self.player_at_the_top:
-            self.disable_button()
         if cube.rect.top < self.rect.y:
             if cube.rect.left + WIDTH_CUBE < self.rect.x or \
                     cube.rect.left > self.rect.x + self.rect.w:
@@ -925,6 +928,10 @@ class Button(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.rect = self.rect.move(self.x, self.y + 5)
+        if not self.activated:
+            if self.main_button:
+                pygame.mixer.Sound.play(self.door_sound)
+            pygame.mixer.Sound.play(self.button_sound)
         self.activated = True
         self.control_thing.activated_list[self.thing_arg] = True
 
@@ -933,6 +940,10 @@ class Button(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.rect = self.rect.move(self.x, self.y)
+        if self.activated:
+            if self.main_button:
+                pygame.mixer.Sound.play(self.door_sound)
+            pygame.mixer.Sound.play(self.button_sound)
         self.activated = False
         self.control_thing.activated_list[self.thing_arg] = False
 
@@ -1227,10 +1238,10 @@ floor_group.add(floor)
 wall_left_group.add(wall_left)
 wall_right_group.add(wall_right)
 player = Player()
-button_1 = Button(60, 270, door_1, [Wire(100, 100, 'ver')], 0)
-button_2 = Button(400, 270, door_2, [Wire(200, 140, 'hor')], 0)
-button_3 = Button(60, 650, door_3, [Wire(310, 100, 'ver')], 0)
-button_4 = Button(200, 650, door_3, [Wire(410, 140, 'hor')], 1)
+button_1 = Button(60, 270, door_1, [Wire(100, 100, 'ver')], 0, True)
+button_2 = Button(400, 270, door_2, [Wire(200, 140, 'hor')], 0, True)
+button_3 = Button(60, 650, door_3, [Wire(310, 100, 'ver')], 0, True)
+button_4 = Button(200, 650, door_3, [Wire(410, 140, 'hor')], 1, True)
 button_5 = Button(400, 650, hameleon, [Wire(520, 100, 'ver')], 0)
 
 blue_portal = Portal('blue')
