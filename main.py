@@ -119,8 +119,36 @@ class LevelsWindow(QWidget):
         file_level = open('data/save.txt', 'w')
         file_level.write(str(self.num_level) + ' ' + str(self.max_level))
         file_level.close()
+        reinit_groups()
         self.reinit_pygame()
         self.show()
+
+
+class FinishWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.setGeometry(100, 100, 1200, 680)
+        self.setWindowTitle('Congratulations')
+        # Загрузка иконки
+        self.setWindowIcon(QIcon('data/icon.gif'))
+
+        # Загрузка фона
+        self.set_background()
+
+        pygame.init()
+        # включение фоновой музыки
+        pygame.mixer.music.load('data/finish_music.mp3')
+        pygame.mixer.music.play(-1)
+
+    def set_background(self):
+        # Загрузка фона для главного окна
+        oImage = QImage("data/finish_image.png")
+        palette = QPalette()
+        palette.setBrush(QPalette.Window, QBrush(oImage))
+        self.setPalette(palette)
 
 
 class MainWindow(QMainWindow):
@@ -177,7 +205,7 @@ class MainWindow(QMainWindow):
 
         # включение фоновой музыки
         pygame.mixer.music.load('data/background_music.mp3')
-        pygame.mixer.music.set_volume(0.5)
+        pygame.mixer.music.set_volume(0.3)
         pygame.mixer.music.play(-1)
 
     def game_start(self):
@@ -191,6 +219,7 @@ class MainWindow(QMainWindow):
         self.hide()
         reinit_groups()
         win_flag = load_level()
+        reinit_groups()
         while num_level < 4 and win_flag:
             max_level = max(num_level, max_level)
             num_level += 1
@@ -200,12 +229,17 @@ class MainWindow(QMainWindow):
             self.reinit_pygame()
             reinit_groups()
             win_flag = load_level()
-        if num_level == 4:
+        if num_level == 4 and win_flag:
             file_level = open('data/save.txt', 'w')
             file_level.write(str(num_level) + ' ' + str(max_level + 1))
             file_level.close()
-        self.reinit_pygame()
-        self.show()
+            reinit_groups()
+            self.win = FinishWindow()
+            self.win.show()
+        else:
+            reinit_groups()
+            self.reinit_pygame()
+            self.show()
 
     def game_continue(self):
         pygame.mixer.Sound.play(self.click_sound)
@@ -217,6 +251,7 @@ class MainWindow(QMainWindow):
         self.hide()
         reinit_groups()
         win_flag = load_level()
+        reinit_groups()
         while num_level < 4 and win_flag:
             max_level = max(num_level, max_level)
             num_level += 1
@@ -226,12 +261,17 @@ class MainWindow(QMainWindow):
             self.reinit_pygame()
             reinit_groups()
             win_flag = load_level()
-        if num_level == 4:
+        if num_level == 4 and win_flag:
             file_level = open('data/save.txt', 'w')
             file_level.write(str(num_level) + ' ' + str(max_level + 1))
             file_level.close()
-        self.reinit_pygame()
-        self.show()
+            reinit_groups()
+            self.win = FinishWindow()
+            self.win.show()
+        else:
+            reinit_groups()
+            self.reinit_pygame()
+            self.show()
 
     def levels(self):
         pygame.mixer.Sound.play(self.click_sound)
