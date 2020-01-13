@@ -1,17 +1,13 @@
 import sys
 import pygame
+import os
 from PyQt5 import uic
 from PyQt5.QtCore import Qt
 from PyQt5.Qt import QSize, QPixmap
 from PyQt5.QtWidgets import QApplication, QPushButton, QMainWindow, \
     QErrorMessage, QTableWidgetItem, QHeaderView, QInputDialog, QStyle, QWidget
 from PyQt5.QtGui import QColor, QImage, QPalette, QBrush, QIcon, QPixmap
-
-
-pygame.init()
-pygame.mixer.music.load('data/background_music.mp3')
-pygame.mixer.music.set_volume(0.5)
-pygame.mixer.music.play(-1)
+from game import load_image, load_level, reinit_groups
 
 
 class LevelsWindow(QWidget):
@@ -22,6 +18,11 @@ class LevelsWindow(QWidget):
         self.initUI()
 
     def initUI(self):
+        # Загрузка иконки
+        self.setWindowIcon(QIcon('data/icon.gif'))
+
+        self.reinit_pygame()
+
         # Загрузка фона
         self.set_background()
 
@@ -34,13 +35,27 @@ class LevelsWindow(QWidget):
         # Изменение названия главного окна
         self.setWindowTitle("Portal")
 
+        file_level = open('data/save.txt', encoding='utf8')
+        data = file_level.read().split()
+        self.num_level, self.max_level = int(data[0]), int(data[1])
+
+    def reinit_pygame(self):
+        pygame.init()
+
+        # включение фоновой музыки
+        pygame.mixer.music.load('data/background_music.mp3')
+        pygame.mixer.music.set_volume(0.5)
+        pygame.mixer.music.play(-1)
+
     def load_maps(self):
         # Загрузка картинок карт
-        self.pixmap = QPixmap("data/ExampleMapImage.jpg")
-
+        self.pixmap = QPixmap("data/level_1_image.png")
         self.label_2.setPixmap(self.pixmap)
+        self.pixmap = QPixmap("data/level_2_image.png")
         self.label_4.setPixmap(self.pixmap)
+        self.pixmap = QPixmap("data/level_3_image.png")
         self.label_6.setPixmap(self.pixmap)
+        self.pixmap = QPixmap("data/level_4_image.png")
         self.label_8.setPixmap(self.pixmap)
 
     def setting_buttons(self):
@@ -79,15 +94,33 @@ class LevelsWindow(QWidget):
 
     def return_in_menu(self):
         pygame.mixer.Sound.play(self.click_sound)
+        # Возвращение в главное меню
         self.window = MainWindow()
         self.window.show()
         self.close()
 
     def load_level(self):
+        # Запуск выбранного уровня
         pygame.mixer.Sound.play(self.click_sound)
-        name = self.sender().text()[-1]
+        name = int(self.sender().text()[-1])
+        if name > self.max_level:
+            # Проверка на пройденность
+            error_message = QErrorMessage(self)
+            error_message.showMessage("Вы еще не прошли этот уровень")
+            return
         # Запуск уровня name
-        pass
+        file_level = open('data/save.txt', 'w')
+        file_level.write(str(name) + ' ' + str(self.max_level))
+        file_level.close()
+        self.reinit_pygame()
+        self.hide()
+        reinit_groups()
+        load_level()
+        file_level = open('data/save.txt', 'w')
+        file_level.write(str(self.num_level) + ' ' + str(self.max_level))
+        file_level.close()
+        self.reinit_pygame()
+        self.show()
 
 
 class MainWindow(QMainWindow):
@@ -98,6 +131,11 @@ class MainWindow(QMainWindow):
         self.initUI()
 
     def initUI(self):
+        # Загрузка иконки
+        self.setWindowIcon(QIcon('data/icon.gif'))
+
+        self.reinit_pygame()
+
         # Загрузка фона
         self.set_background()
 
@@ -123,10 +161,10 @@ class MainWindow(QMainWindow):
 
         # Настройка кнопок
         self.pushButton.setStyleSheet(style_buttons)
-        self.pushButton.clicked.connect(self.game_start)
+        self.pushButton.clicked.connect(self.game_continue)
 
         self.pushButton_2.setStyleSheet(style_buttons)
-        self.pushButton_2.clicked.connect(self.game_continue)
+        self.pushButton_2.clicked.connect(self.game_start)
 
         self.pushButton_3.setStyleSheet(style_buttons)
         self.pushButton_3.clicked.connect(self.levels)
@@ -134,18 +172,70 @@ class MainWindow(QMainWindow):
         self.pushButton_4.setStyleSheet(style_buttons)
         self.pushButton_4.clicked.connect(self.quit)
 
+    def reinit_pygame(self):
+        pygame.init()
+
+        # включение фоновой музыки
+        pygame.mixer.music.load('data/background_music.mp3')
+        pygame.mixer.music.set_volume(0.5)
+        pygame.mixer.music.play(-1)
+
     def game_start(self):
         pygame.mixer.Sound.play(self.click_sound)
         # Запуск игры с самого начала (со сбросом предыдущего прогресса)
-        pass
+        num_level, max_level = 1, 1
+        file_level = open('data/save.txt', 'w')
+        file_level.write(str(num_level) + ' ' + str(max_level))
+        file_level.close()
+        self.reinit_pygame()
+        self.hide()
+        reinit_groups()
+        win_flag = load_level()
+        while num_level < 4 and win_flag:
+            max_level = max(num_level, max_level)
+            num_level += 1
+            file_level = open('data/save.txt', 'w')
+            file_level.write(str(num_level) + ' ' + str(max_level))
+            file_level.close()
+            self.reinit_pygame()
+            reinit_groups()
+            win_flag = load_level()
+        if num_level == 4:
+            file_level = open('data/save.txt', 'w')
+            file_level.write(str(num_level) + ' ' + str(max_level + 1))
+            file_level.close()
+        self.reinit_pygame()
+        self.show()
 
     def game_continue(self):
         pygame.mixer.Sound.play(self.click_sound)
         # Продолжение игры
-        pass
+        file_level = open('data/save.txt', encoding='utf8')
+        data = file_level.read().split()
+        num_level, max_level = int(data[0]), int(data[1])
+        self.reinit_pygame()
+        self.hide()
+        reinit_groups()
+        win_flag = load_level()
+        while num_level < 4 and win_flag:
+            max_level = max(num_level, max_level)
+            num_level += 1
+            file_level = open('data/save.txt', 'w')
+            file_level.write(str(num_level) + ' ' + str(max_level))
+            file_level.close()
+            self.reinit_pygame()
+            reinit_groups()
+            win_flag = load_level()
+        if num_level == 4:
+            file_level = open('data/save.txt', 'w')
+            file_level.write(str(num_level) + ' ' + str(max_level + 1))
+            file_level.close()
+        self.reinit_pygame()
+        self.show()
 
     def levels(self):
         pygame.mixer.Sound.play(self.click_sound)
+        # Запуск окна загрузки уровней
         self.window = LevelsWindow()
         self.window.show()
         self.close()

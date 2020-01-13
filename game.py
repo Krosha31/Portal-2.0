@@ -5,19 +5,31 @@ pygame.init()
 # Объявление констант и некоторых переменных
 HEIGHT_CHELL = WIDTH_CHELL = 100
 HEIGHT_CUBE = WIDTH_CUBE = 70
-WIDTH_SCREEN = HEIGHT_SCREEN = 700
-size = WIDTH_SCREEN, HEIGHT_SCREEN
 HEIGHT_PORTAL = 100
 WIDTH_PORTAL = 20
 WIDTH_WIRE = HEIGHT_WIRE = 100
 HEIGHT_SPHERE = WIDTH_SPHERE = 16
 STEP = 20
 ZERO_SPEED = 5
+walking_event = 25
+pygame.time.set_timer(walking_event, 100)
+svobod_pad_event = 24
+pygame.time.set_timer(svobod_pad_event, 25)
+pfly_event = 26
+pygame.time.set_timer(pfly_event, 1)
+door_event = 23
 cube_in_level = True
-screen = pygame.display.set_mode(size)
+pygame.time.set_timer(door_event, 1)
+player_group = pygame.sprite.Group()
+blue_portal_group = pygame.sprite.Group()
+yellow_portal_group = pygame.sprite.Group()
+cursor_group = pygame.sprite.Group()
+cube_group = pygame.sprite.Group()
+background_group = pygame.sprite.Group()
+player_left_cube = player_right_cube = 0
 
 
-def load_image(name, colorkey=None):  # Загрзка изображения
+def load_image(name, colorkey=None):  # Загрузка изображения
     fullname = os.path.join('data', name)
     image = pygame.image.load(fullname).convert()
     if colorkey is not None:
@@ -117,7 +129,7 @@ def cube_pass_to_portal(self, color):
 
 
 class Player(pygame.sprite.Sprite):  # класс персонажа
-    def __init__(self, x=350, y=50):  # создание спрайта персонажа
+    def __init__(self, x=0, y=0):  # создание спрайта персонажа
         super().__init__(player_group)
         self.left_frames = []
         self.right_frames = []
@@ -203,7 +215,7 @@ class Player(pygame.sprite.Sprite):  # класс персонажа
                 self.rect.x = blue_portal.rect.x - WIDTH_CHELL + 19
                 self.rect.y = blue_portal.rect.y
                 if self.rect.y - 61 < cube.rect.y < self.rect.y + 91 and \
-                        cube.rect.x > self.rect.x - 47:
+                        self.rect.x - 47 < cube.rect.x < self.rect.x + 82:
                     cube.rect.x = self.rect.x - 47
                 if position == 1:
                     if speed_horizontal != 0:
@@ -224,7 +236,7 @@ class Player(pygame.sprite.Sprite):  # класс персонажа
                 self.rect.x = blue_portal.rect.x + 1
                 self.rect.y = blue_portal.rect.y
                 if self.rect.y - 61 < cube.rect.y < self.rect.y + 91 and \
-                        cube.rect.x < self.rect.x + 82:
+                        self.rect.x - 47 < cube.rect.x < self.rect.x + 82:
                     cube.rect.x = self.rect.x + 82
                 if position == 1 and speed_horizontal == 0:
                     speed_horizontal = ZERO_SPEED
@@ -260,7 +272,7 @@ class Player(pygame.sprite.Sprite):  # класс персонажа
                 elif position == 4:
                     self.rect.x = self.rect.x - yellow_portal.rect.x + blue_portal.rect.x
                 if self.rect.x - 45 < cube.rect.x < self.rect.x + 80 and \
-                        cube.rect.y > self.rect.y - 63:
+                        self.rect.y - 63 < cube.rect.y < self.rect.y + 93:
                     cube.rect.y = self.rect.y - 63
                 speed_horizontal = 0
             elif blue_portal.position == 4:
@@ -283,7 +295,7 @@ class Player(pygame.sprite.Sprite):  # класс персонажа
                     speed_vertical = -speed_vertical
                     self.rect.x = self.rect.x - yellow_portal.rect.x + blue_portal.rect.x
                 if self.rect.x - 45 < cube.rect.x < self.rect.x + 80 and \
-                        cube.rect.y < self.rect.y + 93:
+                        self.rect.y - 63 < cube.rect.y < self.rect.y + 93:
                     cube.rect.y = self.rect.y + 93
                 speed_horizontal = 0
         elif color == 'yellow':
@@ -292,7 +304,7 @@ class Player(pygame.sprite.Sprite):  # класс персонажа
                 self.rect.x = yellow_portal.rect.x - WIDTH_CHELL + 19
                 self.rect.y = yellow_portal.rect.y
                 if self.rect.y - 61 < cube.rect.y < self.rect.y + 91 and \
-                        cube.rect.x > self.rect.x - 47:
+                        self.rect.x - 47 < cube.rect.x < self.rect.x + 82:
                     cube.rect.x = self.rect.x - 47
                 if position == 1:
                     if speed_horizontal != 0:
@@ -313,7 +325,7 @@ class Player(pygame.sprite.Sprite):  # класс персонажа
                 self.rect.x = yellow_portal.rect.x + 1
                 self.rect.y = yellow_portal.rect.y
                 if self.rect.y - 61 < cube.rect.y < self.rect.y + 91 and \
-                        cube.rect.x < self.rect.x + 82:
+                        self.rect.x - 47 < cube.rect.x < self.rect.x + 82:
                     cube.rect.x = self.rect.x + 82
                 if position == 1 and speed_horizontal == 0:
                     speed_horizontal = ZERO_SPEED
@@ -349,7 +361,7 @@ class Player(pygame.sprite.Sprite):  # класс персонажа
                 elif position == 4:
                     self.rect.x = self.rect.x - blue_portal.rect.x + yellow_portal.rect.x
                 if self.rect.x - 45 < cube.rect.x < self.rect.x + 80 and \
-                        cube.rect.y > self.rect.y - 63:
+                        self.rect.y - 63 < cube.rect.y < self.rect.y + 93:
                     cube.rect.y = self.rect.y - 63
                 speed_horizontal = 0
             elif yellow_portal.position == 4:
@@ -372,7 +384,7 @@ class Player(pygame.sprite.Sprite):  # класс персонажа
                     speed_vertical = -speed_vertical
                     self.rect.x = self.rect.x - blue_portal.rect.x + yellow_portal.rect.x
                 if self.rect.x - 45 < cube.rect.x < self.rect.x + 80 and \
-                        cube.rect.y < self.rect.y + 93:
+                        self.rect.y - 63 < cube.rect.y < self.rect.y + 93:
                     cube.rect.y = self.rect.y + 93
                 speed_horizontal = 0
         if flag_side != '':
@@ -668,6 +680,8 @@ class Platform(pygame.sprite.Sprite):
                     elif self.rect.y - cube.rect.top - HEIGHT_CUBE > speed_vertical_cube:
                         return None
                     else:
+                        speed_ver_rez_cube = speed_vertical_cube
+                        speed_hor_rez_cube = speed_horizontal_cube
                         speed_vertical_cube = 0
                         speed_horizontal_cube = 0
                         return self.rect.y - cube.rect.top - HEIGHT_CUBE
@@ -734,7 +748,7 @@ class Platform(pygame.sprite.Sprite):
 
 class Cube(pygame.sprite.Sprite):
     # класс куба, загрузка ищображения куба
-    def __init__(self, x, y):
+    def __init__(self, x=0, y=0):
         super().__init__(cube_group, construction_group)
         self.image = load_image('cube.gif')
         if cube_in_level:
@@ -847,7 +861,7 @@ class Cube(pygame.sprite.Sprite):
                 self.rect.x = blue_portal.rect.x - WIDTH_CUBE - 1
                 self.rect.y = blue_portal.rect.y + HEIGHT_PORTAL // 2 - HEIGHT_CUBE // 2
                 if player.rect.y - 61 < self.rect.y < player.rect.y + 91 and \
-                        self.rect.x < player.rect.x + 82:
+                        player.rect.x - 47 < self.rect.x < player.rect.x + 82:
                     player.rect.x = self.rect.x - 82
                 if position == 1:
                     speed_horizontal_cube = -speed_horizontal_cube
@@ -855,12 +869,14 @@ class Cube(pygame.sprite.Sprite):
                     speed_horizontal_cube = -speed_vertical_cube + 1
                 elif position == 4:
                     speed_horizontal_cube = speed_vertical_cube
+                if speed_horizontal_cube > 0:
+                    speed_horizontal_cube = 0
                 speed_vertical_cube = 1
             elif blue_portal.position == 3:
                 self.rect.x = blue_portal.rect.x + WIDTH_PORTAL + 1
                 self.rect.y = blue_portal.rect.y + HEIGHT_PORTAL // 2 - HEIGHT_CUBE // 2
                 if player.rect.y - 61 < self.rect.y < player.rect.y + 91 and \
-                        self.rect.x > player.rect.x - 47:
+                        player.rect.x - 47 < self.rect.x < player.rect.x + 82:
                     player.rect.x = self.rect.x + 47
                 if position == 3:
                     speed_horizontal_cube = -speed_horizontal_cube
@@ -868,12 +884,14 @@ class Cube(pygame.sprite.Sprite):
                     speed_horizontal_cube = speed_vertical_cube - 1
                 elif position == 4:
                     speed_horizontal_cube = -speed_vertical_cube
+                if speed_horizontal_cube < 0:
+                    speed_horizontal_cube = 0
                 speed_vertical_cube = 1
             elif blue_portal.position == 2:
                 self.rect.y = blue_portal.rect.y - HEIGHT_CUBE - 1
                 self.rect.x = blue_portal.rect.x + HEIGHT_PORTAL // 2 - WIDTH_CUBE // 2
                 if player.rect.x - 45 < self.rect.x < player.rect.x + 80 and \
-                        self.rect.y < player.rect.y + 93:
+                        player.rect.y - 63 < self.rect.y < player.rect.y + 93:
                     player.rect.y = self.rect.y - 93
                 if position == 1:
                     speed_vertical_cube = -speed_horizontal_cube
@@ -886,7 +904,7 @@ class Cube(pygame.sprite.Sprite):
                 self.rect.y = blue_portal.rect.y + WIDTH_PORTAL + 1
                 self.rect.x = blue_portal.rect.x + HEIGHT_PORTAL // 2 - WIDTH_CUBE // 2
                 if player.rect.x - 45 < self.rect.x < player.rect.x + 80 and \
-                        self.rect.y > player.rect.y - 63:
+                        player.rect.y - 63 < self.rect.y < player.rect.y + 93:
                     player.rect.y = self.rect.y + 63
                 if position == 1:
                     speed_vertical_cube = speed_horizontal_cube
@@ -900,7 +918,7 @@ class Cube(pygame.sprite.Sprite):
                 self.rect.x = yellow_portal.rect.x - WIDTH_CUBE - 1
                 self.rect.y = yellow_portal.rect.y + HEIGHT_PORTAL // 2 - HEIGHT_CUBE // 2
                 if player.rect.y - 61 < self.rect.y < player.rect.y + 91 and \
-                        self.rect.x < player.rect.x + 82:
+                        player.rect.x - 47 < self.rect.x < player.rect.x + 82:
                     player.rect.x = self.rect.x - 82
                 if position == 1:
                     speed_horizontal_cube = -speed_horizontal_cube
@@ -908,12 +926,14 @@ class Cube(pygame.sprite.Sprite):
                     speed_horizontal_cube = -speed_vertical_cube + 1
                 elif position == 4:
                     speed_horizontal_cube = speed_vertical_cube
+                if speed_horizontal_cube > 0:
+                    speed_horizontal_cube = 0
                 speed_vertical_cube = 1
             elif yellow_portal.position == 3:
                 self.rect.x = yellow_portal.rect.x + WIDTH_PORTAL + 1
                 self.rect.y = yellow_portal.rect.y + HEIGHT_PORTAL // 2 - HEIGHT_CUBE // 2
                 if player.rect.y - 61 < self.rect.y < player.rect.y + 91 and \
-                        self.rect.x > player.rect.x - 47:
+                        player.rect.x - 47 < self.rect.x < player.rect.x + 82:
                     player.rect.x = self.rect.x + 47
                 if position == 3:
                     speed_horizontal_cube = -speed_horizontal_cube
@@ -921,10 +941,12 @@ class Cube(pygame.sprite.Sprite):
                     speed_horizontal_cube = speed_vertical_cube - 1
                 elif position == 4:
                     speed_horizontal_cube = -speed_vertical_cube
+                if speed_horizontal_cube < 0:
+                    speed_horizontal_cube = 0
                 speed_vertical_cube = 1
             elif yellow_portal.position == 2:
                 if player.rect.x - 45 < self.rect.x < player.rect.x + 80 and \
-                        self.rect.y < player.rect.y + 93:
+                        player.rect.y - 63 < self.rect.y < player.rect.y + 93:
                     player.rect.y = self.rect.y - 93
                 self.rect.y = yellow_portal.rect.y - HEIGHT_CUBE - 1
                 self.rect.x = yellow_portal.rect.x + HEIGHT_PORTAL // 2 - WIDTH_CUBE // 2
@@ -939,7 +961,7 @@ class Cube(pygame.sprite.Sprite):
                 self.rect.y = yellow_portal.rect.y + WIDTH_PORTAL + 1
                 self.rect.x = yellow_portal.rect.x + HEIGHT_PORTAL // 2 - WIDTH_CUBE // 2
                 if player.rect.x - 45 < self.rect.x < player.rect.x + 80 and \
-                        self.rect.y > player.rect.y - 63:
+                        player.rect.y - 63 < self.rect.y < player.rect.y + 93:
                     player.rect.y = self.rect.y + 63
                 if position == 1:
                     speed_vertical_cube = speed_horizontal_cube
@@ -986,7 +1008,7 @@ class Button(pygame.sprite.Sprite):
 
     def interaction(self, side_of_movement, step=STEP):
         # функция взаимодействия персонажа и кнопки со всех четырех сторон,
-        # акже в ней определяется стоит ли персонаж на кнопке или нет и
+        # также в ней определяется стоит ли персонаж на кнопке или нет и
         # выключается кнопка
         global speed_vertical, flag_stand, speed_horizontal, speed_ver_rez, \
             speed_hor_rez, HEIGHT_CHELL
@@ -1425,290 +1447,384 @@ class Portal(pygame.sprite.Sprite):
             self.portal_adjustment_floor_ceiling('f', self.image_list[1])
 
 
-# создание групп спрайтов
-player_group = pygame.sprite.Group()
-all_sprites = pygame.sprite.Group()
-wall_left_group = pygame.sprite.Group()
-wall_right_group = pygame.sprite.Group()
-floor_group = pygame.sprite.Group()
-ceiling_group = pygame.sprite.Group()
-cursor_group = pygame.sprite.Group()
-construction_group = pygame.sprite.Group()
-blue_portal_group = pygame.sprite.Group()
-yellow_portal_group = pygame.sprite.Group()
-platform_group = pygame.sprite.Group()
-door_group = pygame.sprite.Group()
-wire_group = pygame.sprite.Group()
-button_group = pygame.sprite.Group()
-cube_group = pygame.sprite.Group()
+def reinit_groups():  # Обнуление всего, инициализация групп
+    global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, construction_group, \
+        platform_group, door_group, wire_group, button_group, background_group, cube_group, player_group, \
+        cursor_group, cube_in_level, blue_portal_group, yellow_portal_group
+    walking_event = 25
+    pygame.time.set_timer(walking_event, 100)
+    svobod_pad_event = 24
+    pygame.time.set_timer(svobod_pad_event, 25)
+    pfly_event = 26
+    pygame.time.set_timer(pfly_event, 1)
+    door_event = 23
+    pygame.time.set_timer(door_event, 1)
+    player_group = pygame.sprite.Group()
+    blue_portal_group = pygame.sprite.Group()
+    yellow_portal_group = pygame.sprite.Group()
+    cursor_group = pygame.sprite.Group()
+    cube_group = pygame.sprite.Group()
+    background_group = pygame.sprite.Group()
+    all_sprites = pygame.sprite.Group()
+    wall_left_group = pygame.sprite.Group()
+    wall_right_group = pygame.sprite.Group()
+    floor_group = pygame.sprite.Group()
+    ceiling_group = pygame.sprite.Group()
+    construction_group = pygame.sprite.Group()
+    platform_group = pygame.sprite.Group()
+    door_group = pygame.sprite.Group()
+    wire_group = pygame.sprite.Group()
+    button_group = pygame.sprite.Group()
+    background_group = pygame.sprite.Group()
 
-wall_left = WallFloorCelling(0, 120, 20, HEIGHT_SCREEN - 240, 'grey', 'wl', [(120, 300), (400, 580)])
-ceiling_group.add(WallFloorCelling(0, 0, WIDTH_SCREEN, 20, 'grey', 'c', [(20, 680)]))
-wall_right = WallFloorCelling(WIDTH_SCREEN - 20, 0, 20, HEIGHT_SCREEN - 120, 'grey', 'wr', [(20, 580)])
-Platform(0, 300, 160, 100, 'grey', [(0, 0)], [(20, 60), (129, 160)], [(300, 400)], [(20, 60), (129, 160)])
-hameleon = Platform(160, 400, 200, 100, 'grey', [(400, 500)], [(160, 360)], [(400, 500)], [(160, 360)], 'hameleon', 1)
-Platform(360, 300, 180, 100, 'grey', [(300, 400)], [(360, 540)], [(300, 400)], [(360, 540)])
-cube = Cube(220, 100)
-door_1 = Platform(0, 580, 0, 0, '', [], [], [], [], 'door', 1)
-door_2 = Platform(681, 580, 0, 0, '', [], [], [], [], 'door', 1)
-door_3 = Platform(0, 20, 0, 0, '', [], [], [], [], 'door', 2, 0)
-floor = WallFloorCelling(0, HEIGHT_SCREEN - 20, WIDTH_SCREEN, 20, 'grey', 'f', [(20, 680)])
-floor_group.add(floor)
-wall_left_group.add(wall_left)
-wall_right_group.add(wall_right)
-player = Player()
-button_1 = Button(60, 270, door_1, [Wire(100, 100, 'ver')], 0, True)
-button_2 = Button(400, 270, door_2, [Wire(200, 140, 'hor')], 0, True)
-button_3 = Button(60, 650, door_3, [Wire(310, 100, 'ver')], 0, True)
-button_4 = Button(200, 650, door_3, [Wire(410, 140, 'hor')], 1, True)
-button_5 = Button(400, 650, hameleon, [Wire(520, 100, 'ver')], 0)
-blue_portal = Portal('blue')
-yellow_portal = Portal('yellow')
 
-# изменение крусора
-cursor_image = load_image('cursor.png', colorkey=-1)
-cursor_image = pygame.transform.scale(cursor_image, (50, 50))
-cursor = pygame.sprite.Sprite(cursor_group)
-cursor.image = cursor_image
-cursor.rect = cursor.image.get_rect()
-pygame.mouse.set_visible(False)
-walking_event = 25
-pygame.time.set_timer(walking_event, 100)
-svobod_pad_event = 24
-pygame.time.set_timer(svobod_pad_event, 25)
-pfly_event = 26
-pygame.time.set_timer(pfly_event, 1)
-door_event = 23
-pygame.time.set_timer(door_event, 1)
+def load_level(): # Загрузка уровня из файла
+    global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, \
+        construction_group, platform_group, door_group, wire_group, button_group, \
+        cube_in_level, player, cube, blue_portal, yellow_portal, cursor, background_group
+    # Чтение файла
+    file_level = open('data/save.txt', encoding='utf8')
+    num_level = int(file_level.read().split()[0])
+    name_file = 'data/level_{}.txt'.format(str(num_level))
+    file_objects = open(name_file, encoding='utf8')
+    lines = file_objects.readlines()
+    for i in range(len(lines)):
+        lines[i] = lines[i].split()
 
-pygame.mixer.music.load('data/background_music.mp3')
-pygame.mixer.music.set_volume(0.5)
-pygame.mixer.music.play(-1)
+    # Загрузка окна и фона
+    size = int(lines[0][0]), int(lines[0][1])
+    width, height = size[0], size[1]
+    screen = pygame.display.set_mode(size)
+    background = pygame.sprite.Sprite()
+    background_group.add(background)
+    background_image = load_image("background_image.jpg")
+    background.image = pygame.transform.scale(background_image, (size[0], size[1]))
+    background.rect = background.image.get_rect()
+    background.rect.x = 0
+    background.rect.y = 0
 
-running = True
-speed_vertical = speed_horizontal = 0
-speed_vertical_cube = 1
-speed_horizontal_cube = 0
-speed_ver_rez = speed_hor_rez = 0
-speed_ver_rez_cube = speed_hor_rez_cube = 0
-player_left_cube = player_right_cube = 0
-flag_stand = True
-flag_stand_cube = True
+    # Загрузка стен, потолка и пола
+    for k in range(4):
+        interval = []
+        i = 6
+        while i < len(lines[k + 1]):
+            cnt = int(lines[k + 1][i])
+            i += 1
+            for j in range(cnt):
+                left = int(lines[k + 1][i])
+                i += 1
+                right = int(lines[k + 1][i])
+                i += 1
+                interval.append((left, right))
+        if k == 0:
+            wall_left = WallFloorCelling(int(lines[k + 1][0]), int(lines[k + 1][1]),
+                                         int(lines[k + 1][2]), int(lines[k + 1][3]),
+                                         lines[k + 1][4], lines[k + 1][5], interval)
+            wall_left_group.add(wall_left)
+        elif k == 1:
+            wall_right = WallFloorCelling(int(lines[k + 1][0]), int(lines[k + 1][1]),
+                                          int(lines[k + 1][2]), int(lines[k + 1][3]),
+                                          lines[k + 1][4], lines[k + 1][5], interval)
+            wall_right_group.add(wall_right)
+        elif k == 2:
+            ceiling_group.add(WallFloorCelling(int(lines[k + 1][0]), int(lines[k + 1][1]),
+                                               int(lines[k + 1][2]), int(lines[k + 1][3]),
+                                               lines[k + 1][4], lines[k + 1][5], interval))
+        else:
+            floor = WallFloorCelling(int(lines[k + 1][0]), int(lines[k + 1][1]),
+                                     int(lines[k + 1][2]), int(lines[k + 1][3]),
+                                     lines[k + 1][4], lines[k + 1][5], interval)
+            floor_group.add(floor)
 
-go_sound = pygame.mixer.Sound('data/go_sound.wav')
-go_sound.set_volume(0.05)
-groups = [platform_group, button_group, cube_group]
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        if event.type == pygame.MOUSEMOTION:
-            # курсор находится не в левом углу изображения, а в середине
-            cursor.rect.left = event.pos[0] - 25
-            cursor.rect.top = event.pos[1] - 25
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
-                # открытие синего портала
-                blue_portal.click_mouse(event.pos[0] - 25, event.pos[1] - 25,
-                                        player.rect.left, player.rect.top)
-            elif event.button == 3:
-                # открытие оранжевого портала
-                yellow_portal.click_mouse(event.pos[0] - 25, event.pos[1] - 25,
-                                          player.rect.left, player.rect.top)
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
-            # взятие куба в руки
-            if pygame.sprite.spritecollideany(player, cube_group) and cube.position:
-                if player.rect.top + HEIGHT_CHELL // 2 + 10 > cube.rect.y:
-                    # если куб справа
-                    if player.rect.left < cube.rect.left:
-                        cube.rect.left = player.rect.left + WIDTH_CHELL - 25
-                        cube.rect.top = player.rect.top + 6
-                        player_right_cube = 70
-                        for button in button_group:
-                            button.interaction_cube('n')
-                            if button.activated:
-                                button.disable_button()
-                                dop = button.rect.y - player.rect.top - HEIGHT_CHELL + 9
-                                player.rect.top += dop
-                                cube.rect.top += dop
-                        cube.position = False
-                    else:
-                        # если слева
-                        cube.rect.left = player.rect.left - WIDTH_CUBE + 25
-                        cube.rect.top = player.rect.top + 6
-                        player_left_cube = 70
-                        player_right_cube = 70
-                        for button in button_group:
-                            button.interaction_cube('n')
-                            if button.activated:
-                                button.disable_button()
-                                dop = button.rect.y - player.rect.top - HEIGHT_CHELL + 9
-                                player.rect.top += dop
-                                cube.rect.top += dop
-                        cube.position = False
-            elif not cube.position:
-                # отпускание куба
-                speed_vertical_cube = speed_vertical
-                speed_horizontal_cube = speed_horizontal
-                cube.position = True
-                speed_vertical_cube = 1
-                player_left_cube = player_right_cube = 0
-        if event.type == walking_event and pygame.key.get_pressed()[97]:
-            # движение влево с учетом взаимодействий
-            pygame.mixer.Sound.play(go_sound)
-            dop_step = STEP
-            player.rect.left -= player_left_cube
-            # учет стен
-            if pygame.sprite.spritecollideany(player, wall_left_group):
-                player.rect.left += player_left_cube
-                dop_step = player.rect.left - player_left_cube - wall_left.rect.w + 25
-                if dop_step > STEP:
-                    dop_step %= STEP
-            else:
-                # учет платформ, куба, кнопки
-                player.rect.left += player_left_cube
-                indi_break = False
-                for group in groups:
-                    if indi_break:
-                        break
-                    for i in group:
-                        player.rect.left -= player_left_cube
-                        if not pygame.sprite.spritecollideany(i, player_group):
-                            player.rect.left += player_left_cube
-                            continue
+    # Загрузка платформ
+    cnt_platforms = int(lines[5][0])
+    for k in range(cnt_platforms):
+        interval = [[], [], [], []]
+        i, now_inter = 5, 0
+        while i < len(lines[k + 6]):
+            cnt = int(lines[k + 6][i])
+            i += 1
+            for j in range(cnt):
+                left = int(lines[k + 6][i])
+                i += 1
+                right = int(lines[k + 6][i])
+                i += 1
+                interval[now_inter].append((left, right))
+            now_inter += 1
+        Platform(int(lines[k + 6][0]), int(lines[k + 6][1]), int(lines[k + 6][2]),
+                 int(lines[k + 6][3]), lines[k + 6][4], interval[0],
+                 interval[1], interval[2], interval[3])
+
+    # Дозагрузка всего остального
+    if num_level == 1:
+        cube_in_level = False
+        player = Player(20, 430)
+        cube = Cube(0, 0)
+    elif num_level == 2:
+        cube_in_level = True
+        door_1 = Platform(706, height - 120, 0, 0, '',
+                          [(0, 0)], [(0, 0)], [(0, 0)], [(0, 0)], 'door', 1)
+        button_1 = Button(400, height - 50, door_1,
+                          [Wire(425, 869, 'hor'),
+                           Wire(525, 869, 'hor'),
+                           Wire(625, 869, 'hor')], 0, True)
+        door_2 = Platform(160, 340, 0, 0, '',
+                          [(0, 0)], [(0, 0)], [(0, 0)], [(0, 0)], 'door', 2)
+        button_2 = Button(width - 750, 410, door_2,
+                          [Wire(width - 720, 418, 'hor'), Wire(width - 680, 378, 'ver'),
+                           Wire(width - 680, 278, 'ver'), Wire(width - 680, 178, 'ver'),
+                           Wire(width - 720, 138, 'hor'), Wire(width - 720, 138, 'hor'),
+                           Wire(width - 820, 138, 'hor'), Wire(width - 920, 138, 'hor'),
+                           Wire(width - 1020, 138, 'hor'), Wire(width - 1120, 138, 'hor'),
+                           Wire(width - 1220, 138, 'hor'), Wire(width - 1320, 138, 'hor'),
+                           Wire(width - 1378, 178, 'ver'), Wire(width - 1378, 240, 'ver')], 0, True)
+        button_3 = Button(400, 610, door_2,
+                          [Wire(340, 617, 'hor'), Wire(240, 617, 'hor'),
+                           Wire(140, 617, 'hor'), Wire(40, 617, 'hor'),
+                           Wire(-20, 577, 'ver'), Wire(-20, 479, 'ver'),
+                           Wire(-20, 440, 'ver'), Wire(40, 400, 'hor'),
+                           Wire(80, 400, 'hor')], 1, True)
+        player = Player(20, 800)
+        cube = Cube(270, 800)
+    elif num_level == 3:
+        cube_in_level = False
+        player = Player(150, 870)
+        cube = Cube(0, 0)
+    elif num_level == 4:
+        cube_in_level = True
+        hameleon = Platform(550, 20, 40, 560, '', [(20, 580)],
+                            [(0, 0)], [(0, 0)], [(550, 570)], 'hameleon', 1)
+        button_wire_list = [Wire(590, -20, 'hor'), Wire(690, -20, 'hor'),
+                            Wire(790, -20, 'hor'), Wire(890, -20, 'hor'),
+                            Wire(990, -20, 'hor'), Wire(1090, -20, 'hor'),
+                            Wire(1190, -20, 'hor'), Wire(1230, 40, 'ver'),
+                            Wire(1230, 140, 'ver'), Wire(1190, 180, 'hor')]
+        button = Button(1155, 188, hameleon, button_wire_list, 0)
+        cube = Cube(21, 320)
+        player = Player(150, 670)
+
+    # Запуск главного цикла
+    return game_cycle(screen, size, num_level, floor, wall_left, wall_right)
+
+
+def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # игровой цикл
+    global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, construction_group, \
+        platform_group, door_group, wire_group, button_group, player, cube, blue_portal, yellow_portal, cursor, \
+        speed_vertical, speed_horizontal, speed_vertical_cube, speed_horizontal_cube, speed_ver_rez, speed_hor_rez, \
+        speed_ver_rez_cube, speed_hor_rez_cube, player_left_cube, player_right_cube, background_group
+    # декоративные элементы окна
+    pygame.display.set_caption('Portal 2D')
+    pygame.display.set_icon(pygame.image.load('data/icon.gif'))
+    # объявление некоторых переменных
+    blue_portal = Portal('blue')
+    yellow_portal = Portal('yellow')
+    WIDTH_SCREEN = size[0]
+    running = True
+    speed_vertical = speed_horizontal = 0
+    speed_vertical_cube = 1
+    speed_horizontal_cube = 0
+    speed_ver_rez = speed_hor_rez = 0
+    speed_ver_rez_cube = speed_hor_rez_cube = 0
+    player_left_cube = player_right_cube = 0
+    flag_stand = True
+    flag_stand_cube = True
+    # изменение курсора
+    cursor_image = load_image('cursor.png', colorkey=-1)
+    cursor_image = pygame.transform.scale(cursor_image, (50, 50))
+    cursor = pygame.sprite.Sprite(cursor_group)
+    cursor.image = cursor_image
+    cursor.rect = cursor.image.get_rect()
+    pygame.mouse.set_visible(False)
+    go_sound = pygame.mixer.Sound('data/go_sound.wav')
+    go_sound.set_volume(0.05)
+    groups = [platform_group, button_group, cube_group]
+    win_flag = False
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.MOUSEMOTION:
+                # курсор находится не в левом углу изображения, а в середине
+                cursor.rect.left = event.pos[0] - 25
+                cursor.rect.top = event.pos[1] - 25
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    # открытие синего портала
+                    blue_portal.click_mouse(event.pos[0] - 25, event.pos[1] - 25,
+                                            player.rect.left, player.rect.top)
+                elif event.button == 3:
+                    # открытие оранжевого портала
+                    yellow_portal.click_mouse(event.pos[0] - 25, event.pos[1] - 25,
+                                              player.rect.left, player.rect.top)
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
+                # взятие куба в руки
+                if pygame.sprite.spritecollideany(player, cube_group) and cube.position:
+                    if player.rect.top + HEIGHT_CHELL // 2 + 10 > cube.rect.y:
+                        # если куб справа
+                        if player.rect.left < cube.rect.left:
+                            cube.rect.left = player.rect.left + WIDTH_CHELL - 25
+                            cube.rect.top = player.rect.top + 6
+                            player_right_cube = 70
+                            for button in button_group:
+                                button.interaction_cube('n')
+                                if button.activated:
+                                    button.disable_button()
+                                    dop = button.rect.y - player.rect.top - HEIGHT_CHELL + 9
+                                    player.rect.top += dop
+                                    cube.rect.top += dop
+                            cube.position = False
                         else:
-                            player.rect.left += player_left_cube
-                        dop_step = i.interaction('l')
-                        if dop_step is None:
-                            dop_step = STEP
-                            continue
-                        else:
-                            indi_break = True
-                            break
-            if not cube.position:
-                cube.rect.left -= dop_step
-            for button in button_group:
-                button.interaction('n')
-            player.rect.left -= dop_step
-            # обновление изображения спрайта
-            if player.rect.left + WIDTH_CHELL // 2 - pygame.mouse.get_pos()[0] > 0:
-                player.update(False, False)
-            else:
-                player.update(False, True)
-        # движение вправо
-        elif event.type == walking_event and pygame.key.get_pressed()[100]:
-            pygame.mixer.Sound.play(go_sound)
-            dop_step = STEP
-            if not player_left_cube:
-                player.rect.left += player_right_cube
+                            # если слева
+                            cube.rect.left = player.rect.left - WIDTH_CUBE + 25
+                            cube.rect.top = player.rect.top + 6
+                            player_left_cube = 70
+                            player_right_cube = 70
+                            for button in button_group:
+                                button.interaction_cube('n')
+                                if button.activated:
+                                    button.disable_button()
+                                    dop = button.rect.y - player.rect.top - HEIGHT_CHELL + 9
+                                    player.rect.top += dop
+                                    cube.rect.top += dop
+                            cube.position = False
+                elif not cube.position:
+                    # отпускание куба
+                    speed_vertical_cube = speed_vertical
+                    speed_horizontal_cube = speed_horizontal
+                    cube.position = True
+                    speed_vertical_cube = 1
+                    player_left_cube = player_right_cube = 0
+            if event.type == walking_event and pygame.key.get_pressed()[97]:
+                # движение влево с учетом взаимодействий
+                pygame.mixer.Sound.play(go_sound)
+                dop_step = STEP
+                player.rect.left -= player_left_cube
                 # учет стен
-            if pygame.sprite.spritecollideany(player, wall_right_group):
-                if not player_left_cube:
-                    player.rect.left -= player_right_cube
-                if not player_left_cube:
-                    dop_step = WIDTH_SCREEN - wall_right.rect.w - (
-                            player.rect.left + player_right_cube + WIDTH_CHELL - 25)
+                if pygame.sprite.spritecollideany(player, wall_left_group):
+                    player.rect.left += player_left_cube
+                    dop_step = player.rect.left - player_left_cube - wall_left.rect.w + 25
+                    if dop_step > STEP:
+                        dop_step %= STEP
                 else:
-                    dop_step = WIDTH_SCREEN - wall_right.rect.w - (
-                            player.rect.left + WIDTH_CHELL - 25)
-                if dop_step > STEP:
-                    dop_step %= STEP
-            else:
-                # учет платфом, куба, кнопок
-                if not player_left_cube:
-                    player.rect.left -= player_right_cube
-                indi_break = False
-                for group in groups:
-                    if indi_break:
-                        break
-                    for i in group:
-                        player.rect.left += player_right_cube
-                        if not pygame.sprite.spritecollideany(i, player_group):
-                            player.rect.left -= player_right_cube
-                            continue
-                        else:
-                            player.rect.left -= player_right_cube
-                        dop_step = i.interaction('r')
-                        if dop_step is None:
-                            dop_step = STEP
-                            continue
-                        else:
-                            indi_break = True
+                    # учет платформ, куба, кнопки
+                    player.rect.left += player_left_cube
+                    indi_break = False
+                    for group in groups:
+                        if indi_break:
                             break
-            if not cube.position:
-                cube.rect.left += dop_step
-            for button in button_group:
-                button.interaction('n')
-            player.rect.left += dop_step
-            if player.rect.left + WIDTH_CHELL // 2 - pygame.mouse.get_pos()[0] > 0:
-                player.update(True, False)
-            else:
-                player.update(True, True)
-        # обнуление горизонтальной скорости при встрече мтен
-        if speed_horizontal < 0 and pygame.sprite.spritecollideany(player, wall_left_group):
-            player.rect.x = wall_left.rect.x - 4
-            speed_horizontal = 0
-        if speed_horizontal > 0 and pygame.sprite.spritecollideany(player, wall_right_group):
-            player.rect.x = wall_right.rect.x - 81
-            speed_horizontal = 0
-        # присваивание вертикальной скорости для прыжка
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and \
-                (pygame.sprite.collide_mask(player, floor) or not flag_stand):
-            flag_stand = True
-            speed_vertical = -15
-        # событие открытия и закрытия двери
-        if event.type == door_event:
-            for i in button_group:
-                if i.control_thing.activated_list[i.thing_arg]:
-                    for j in i.wire_list:
-                        j.wire_on()
-                else:
-                    for j in i.wire_list:
-                        j.wire_off()
-                if i.control_thing.activated_list == [True] * i.control_thing.activated_list_len:
-                    i.control_thing.thing_on()
-                else:
-                    i.control_thing.thing_off()
-        # событие падения или прыжка. Изменяет положение перса/куба и их скорость
-        if event.type == svobod_pad_event:
-            # учет взаимодействия с полом
-            if not pygame.sprite.collide_mask(player, floor) and speed_vertical >= 0:
-                if floor.rect.y - player.rect.top - HEIGHT_CHELL < speed_vertical and not \
-                        (player.rect.left + WIDTH_CHELL - 25 < floor.rect.x or player.rect.left >
-                         floor.rect.x + floor.rect.w):
-                    if not cube.position:
-                        cube.rect.top += floor.rect.y - player.rect.top - HEIGHT_CHELL + 5
-                    player.rect.top += floor.rect.y - player.rect.top - HEIGHT_CHELL + 5
-                # учет взаимодействия с платформами, кубом, кнопками
-                elif not pygame.sprite.collide_mask(player, floor):
-                    dop_flag = False
-                    dop = speed_vertical
-                    for group in groups[0:1]:
                         for i in group:
-                            dop = i.interaction('n')
-                            if dop is None:
-                                dop = speed_vertical
-                                dop_flag = False
+                            player.rect.left -= player_left_cube
+                            if not pygame.sprite.spritecollideany(i, player_group):
+                                player.rect.left += player_left_cube
                                 continue
                             else:
-                                dop_flag = True
+                                player.rect.left += player_left_cube
+                            dop_step = i.interaction('l')
+                            if dop_step is None:
+                                dop_step = STEP
+                                continue
+                            else:
+                                indi_break = True
                                 break
-                    if not cube.position:
-                        cube.rect.top += dop
-                    player.rect.top += dop
-                    if not speed_vertical:
-                        flag_stand = False
-                    for group in groups[0:1]:
+                if not cube.position:
+                    cube.rect.left -= dop_step
+                for button in button_group:
+                    button.interaction('n')
+                player.rect.left -= dop_step
+                # обновление изображения спрайта
+                if player.rect.left + WIDTH_CHELL // 2 - pygame.mouse.get_pos()[0] > 0:
+                    player.update(False, False)
+                else:
+                    player.update(False, True)
+            # движение вправо
+            elif event.type == walking_event and pygame.key.get_pressed()[100]:
+                pygame.mixer.Sound.play(go_sound)
+                dop_step = STEP
+                if not player_left_cube:
+                    player.rect.left += player_right_cube
+                    # учет стен
+                if pygame.sprite.spritecollideany(player, wall_right_group):
+                    if not player_left_cube:
+                        player.rect.left -= player_right_cube
+                    if not player_left_cube:
+                        dop_step = WIDTH_SCREEN - wall_right.rect.w - (
+                                player.rect.left + player_right_cube + WIDTH_CHELL - 25)
+                    else:
+                        dop_step = WIDTH_SCREEN - wall_right.rect.w - (
+                                player.rect.left + WIDTH_CHELL - 25)
+                    if dop_step > STEP:
+                        dop_step %= STEP
+                else:
+                    # учет платфом, куба, кнопок
+                    if not player_left_cube:
+                        player.rect.left -= player_right_cube
+                    indi_break = False
+                    for group in groups:
+                        if indi_break:
+                            break
                         for i in group:
-                            flag_stand = i.stand_or_not_stand()
-                            if not flag_stand:
+                            player.rect.left += player_right_cube
+                            if not pygame.sprite.spritecollideany(i, player_group):
+                                player.rect.left -= player_right_cube
+                                continue
+                            else:
+                                player.rect.left -= player_right_cube
+                            dop_step = i.interaction('r')
+                            if dop_step is None:
+                                dop_step = STEP
+                                continue
+                            else:
+                                indi_break = True
                                 break
-                    if flag_stand:
-                        speed_vertical += 1
-                    if not dop_flag:
+                if not cube.position:
+                    cube.rect.left += dop_step
+                for button in button_group:
+                    button.interaction('n')
+                player.rect.left += dop_step
+                if player.rect.left + WIDTH_CHELL // 2 - pygame.mouse.get_pos()[0] > 0:
+                    player.update(True, False)
+                else:
+                    player.update(True, True)
+            # обнуление горизонтальной скорости при встрече мтен
+            if speed_horizontal < 0 and pygame.sprite.spritecollideany(player, wall_left_group):
+                player.rect.x = wall_left.rect.x - 4
+                speed_horizontal = 0
+            if speed_horizontal > 0 and pygame.sprite.spritecollideany(player, wall_right_group):
+                player.rect.x = wall_right.rect.x - 81
+                speed_horizontal = 0
+            # присваивание вертикальной скорости для прыжка
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and \
+                    (pygame.sprite.collide_mask(player, floor) or not flag_stand):
+                flag_stand = True
+                speed_vertical = -15
+            # событие открытия и закрытия двери
+            if event.type == door_event:
+                for i in button_group:
+                    if i.control_thing.activated_list[i.thing_arg]:
+                        for j in i.wire_list:
+                            j.wire_on()
+                    else:
+                        for j in i.wire_list:
+                            j.wire_off()
+                    if i.control_thing.activated_list == [True] * i.control_thing.activated_list_len:
+                        i.control_thing.thing_on()
+                    else:
+                        i.control_thing.thing_off()
+            # событие падения или прыжка. Изменяет положение перса/куба и их скорость
+            if event.type == svobod_pad_event:
+                # учет взаимодействия с полом
+                if not pygame.sprite.collide_mask(player, floor) and speed_vertical >= 0:
+                    if floor.rect.y - player.rect.top - HEIGHT_CHELL < speed_vertical and not \
+                            (player.rect.left + WIDTH_CHELL - 25 < floor.rect.x or player.rect.left >
+                             floor.rect.x + floor.rect.w):
+                        if not cube.position:
+                            cube.rect.top += floor.rect.y - player.rect.top - HEIGHT_CHELL + 5
+                        player.rect.top += floor.rect.y - player.rect.top - HEIGHT_CHELL + 5
+                    # учет взаимодействия с платформами, кубом, кнопками
+                    elif not pygame.sprite.collide_mask(player, floor):
                         dop_flag = False
                         dop = speed_vertical
-                        for group in groups[1:2]:
+                        for group in groups[0:1]:
                             for i in group:
                                 dop = i.interaction('n')
                                 if dop is None:
@@ -1718,10 +1834,22 @@ while running:
                                 else:
                                     dop_flag = True
                                     break
-                        if not dop_flag and cube.position:
+                        if not cube.position:
+                            cube.rect.top += dop
+                        player.rect.top += dop
+                        if not speed_vertical:
+                            flag_stand = False
+                        for group in groups[0:1]:
+                            for i in group:
+                                flag_stand = i.stand_or_not_stand()
+                                if not flag_stand:
+                                    break
+                        if flag_stand:
+                            speed_vertical += 1
+                        if not dop_flag:
                             dop_flag = False
                             dop = speed_vertical
-                            for group in groups[2:3]:
+                            for group in groups[1:2]:
                                 for i in group:
                                     dop = i.interaction('n')
                                     if dop is None:
@@ -1731,68 +1859,54 @@ while running:
                                     else:
                                         dop_flag = True
                                         break
-                        if dop_flag:
-                            if not cube.position:
-                                cube.rect.top += dop
-                            player.rect.top += dop
-                        if not speed_vertical:
-                            flag_stand = False
-            # прыжок(или вылет из поратала) с учетом взаимодействия с платформами, кубом, кнопками
-            elif speed_vertical < 0:
-                dop = abs(speed_vertical)
-                for group in groups[0:1]:
-                    for i in group:
-                        dop = i.interaction('v')
-                        if dop is None:
-                            dop = abs(speed_vertical)
-                            continue
-                        else:
-                            break
-                if not cube.position:
-                    cube.rect.top -= dop
-                player.rect.top -= dop
-                speed_vertical += 1
-            # зануление скоростей, если персонаж взаимодействует с полом
-            elif pygame.sprite.collide_mask(player, floor):
-                speed_vertical = 0
-                speed_horizontal = 0
-            # учет взаимодействия куба с полом
-            if not pygame.sprite.collide_mask(cube, floor) and speed_vertical_cube >= 0 and \
-                    cube.position:
-                if floor.rect.y - cube.rect.top - HEIGHT_CUBE < speed_vertical_cube:
-                    cube.rect.top += floor.rect.y - cube.rect.top - HEIGHT_CUBE + 5
-                # учет взаимодействия куба с платформами, персонажем, кнопками
-                elif not pygame.sprite.collide_mask(cube, floor):
-                    dop_flag = False
-                    dop = speed_vertical_cube
+                            if not dop_flag and cube.position:
+                                dop_flag = False
+                                dop = speed_vertical
+                                for group in groups[2:3]:
+                                    for i in group:
+                                        dop = i.interaction('n')
+                                        if dop is None:
+                                            dop = speed_vertical
+                                            dop_flag = False
+                                            continue
+                                        else:
+                                            dop_flag = True
+                                            break
+                            if dop_flag:
+                                if not cube.position:
+                                    cube.rect.top += dop
+                                player.rect.top += dop
+                            if not speed_vertical:
+                                flag_stand = False
+                # прыжок(или вылет из поратала) с учетом взаимодействия с платформами, кубом, кнопками
+                elif speed_vertical < 0:
+                    dop = abs(speed_vertical)
                     for group in groups[0:1]:
                         for i in group:
-                            dop = i.interaction_cube('n')
+                            dop = i.interaction('v')
                             if dop is None:
-                                dop = speed_vertical_cube
-                                dop_flag = False
+                                dop = abs(speed_vertical)
                                 continue
                             else:
-                                dop_flag = True
                                 break
-                    cube.rect.top += dop
-                    if not speed_vertical_cube:
-                        flag_stand_cube = False
-                    indi_break = False
-                    for group in groups[0:2] + [player_group]:
-                        if indi_break:
-                            break
-                        for i in group:
-                            flag_stand_cube = i.stand_or_not_stand_cube()
-                            if not flag_stand_cube:
-                                indi_break = True
-                                break
-                    if flag_stand_cube:
-                        speed_vertical_cube += 1
-                    if not dop_flag:
+                    if not cube.position:
+                        cube.rect.top -= dop
+                    player.rect.top -= dop
+                    speed_vertical += 1
+                # зануление скоростей, если персонаж взаимодействует с полом
+                elif pygame.sprite.collide_mask(player, floor):
+                    speed_vertical = 0
+                    speed_horizontal = 0
+                # учет взаимодействия куба с полом
+                if not pygame.sprite.collide_mask(cube, floor) and speed_vertical_cube >= 0 and \
+                        cube.position:
+                    if floor.rect.y - cube.rect.top - HEIGHT_CUBE < speed_vertical_cube:
+                        cube.rect.top += floor.rect.y - cube.rect.top - HEIGHT_CUBE + 5
+                    # учет взаимодействия куба с платформами, персонажем, кнопками
+                    elif not pygame.sprite.collide_mask(cube, floor):
                         dop_flag = False
                         dop = speed_vertical_cube
-                        for group in groups[1:2]:
+                        for group in groups[0:1]:
                             for i in group:
                                 dop = i.interaction_cube('n')
                                 if dop is None:
@@ -1802,152 +1916,182 @@ while running:
                                 else:
                                     dop_flag = True
                                     break
-                        if not dop_flag:
-                            dop = player.interaction_cube('n')
-                            if dop is None:
-                                dop = speed_vertical_cube
-                                dop_flag = False
-                            else:
-                                dop_flag = True
-                        if dop_flag:
-                            cube.rect.top += dop
+                        cube.rect.top += dop
                         if not speed_vertical_cube:
                             flag_stand_cube = False
-            # вылет из портала вверх с учетом взаимодействия с другими объектами
-            elif speed_vertical_cube < 0:
-                dop = abs(speed_vertical_cube)
-                indi_break = False
-                for group in groups[0:1] + [player_group]:
-                    if indi_break:
-                        break
-                    for i in group:
-                        dop = i.interaction_cube('v')
-                        if dop is None:
-                            dop = abs(speed_vertical_cube)
-                            continue
-                        else:
-                            indi_break = True
+                        indi_break = False
+                        for group in groups[0:2] + [player_group]:
+                            if indi_break:
+                                break
+                            for i in group:
+                                flag_stand_cube = i.stand_or_not_stand_cube()
+                                if not flag_stand_cube:
+                                    indi_break = True
+                                    break
+                        if flag_stand_cube:
+                            speed_vertical_cube += 1
+                        if not dop_flag:
+                            dop_flag = False
+                            dop = speed_vertical_cube
+                            for group in groups[1:2]:
+                                for i in group:
+                                    dop = i.interaction_cube('n')
+                                    if dop is None:
+                                        dop = speed_vertical_cube
+                                        dop_flag = False
+                                        continue
+                                    else:
+                                        dop_flag = True
+                                        break
+                            if not dop_flag:
+                                dop = player.interaction_cube('n')
+                                if dop is None:
+                                    dop = speed_vertical_cube
+                                    dop_flag = False
+                                else:
+                                    dop_flag = True
+                            if dop_flag:
+                                cube.rect.top += dop
+                            if not speed_vertical_cube:
+                                flag_stand_cube = False
+                # вылет из портала вверх с учетом взаимодействия с другими объектами
+                elif speed_vertical_cube < 0:
+                    dop = abs(speed_vertical_cube)
+                    indi_break = False
+                    for group in groups[0:1] + [player_group]:
+                        if indi_break:
                             break
-                cube.rect.top -= dop
-                speed_vertical_cube += 1
-            # зануление скоростей персонажа при взаимодействии с полом
-            elif pygame.sprite.collide_mask(cube, floor):
-                speed_vertical_cube = 0
-                speed_horizontal_cube = 0
-            # учет горизонтального полета(вылет из портала) куба и персонажа и их
-            # взаимодействий с другими объектами
-            indi_right_left = 'Саня Логинов'
-            indi_right_left_cube = 'Саня Логинов'
-            for group in groups[0:3]:
-                for i in group:
-                    if speed_horizontal > 0:
-                        indi_right_left = 'r'
-                        dop = i.interaction('r', step=speed_horizontal)
-                        if dop is None:
-                            dop = abs(speed_horizontal)
-                        else:
-                            break
-                    elif speed_horizontal < 0:
-                        indi_right_left = 'l'
-                        dop = i.interaction('l', step=abs(speed_horizontal))
-                        if dop is None:
-                            dop = abs(speed_horizontal)
-                        else:
-                            break
-            if indi_right_left == 'r':
-                if not cube.position:
-                    cube.rect.left += dop
-                player.rect.left += dop
-            elif indi_right_left == 'l':
-                if not cube.position:
-                    cube.rect.left -= dop
-                player.rect.left -= dop
-            if cube.position:
-                for group in groups[0:2] + [player_group]:
-                    for i in group:
-                        if speed_horizontal_cube > 0:
-                            indi_right_left_cube = 'r'
-                            dop = i.interaction_cube('r', step=speed_horizontal)
+                        for i in group:
+                            dop = i.interaction_cube('v')
                             if dop is None:
-                                dop = abs(speed_horizontal_cube)
+                                dop = abs(speed_vertical_cube)
+                                continue
+                            else:
+                                indi_break = True
+                                break
+                    cube.rect.top -= dop
+                    speed_vertical_cube += 1
+                # зануление скоростей персонажа при взаимодействии с полом
+                elif pygame.sprite.collide_mask(cube, floor):
+                    speed_vertical_cube = 0
+                    speed_horizontal_cube = 0
+                # учет горизонтального полета(вылет из портала) куба и персонажа и их
+                # взаимодействий с другими объектами
+                indi_right_left = 'Саня Логинов'
+                indi_right_left_cube = 'Саня Логинов'
+                for group in groups[0:3]:
+                    for i in group:
+                        if speed_horizontal > 0:
+                            indi_right_left = 'r'
+                            dop = i.interaction('r', step=speed_horizontal)
+                            if dop is None:
+                                dop = abs(speed_horizontal)
                             else:
                                 break
-                        elif speed_horizontal_cube < 0:
-                            indi_right_left_cube = 'l'
-                            dop = i.interaction_cube('l', step=abs(speed_horizontal_cube))
+                        elif speed_horizontal < 0:
+                            indi_right_left = 'l'
+                            dop = i.interaction('l', step=abs(speed_horizontal))
                             if dop is None:
-                                dop = abs(speed_horizontal_cube)
+                                dop = abs(speed_horizontal)
                             else:
                                 break
-                if indi_right_left_cube == 'r':
-                    cube.rect.left += dop
-                elif indi_right_left_cube == 'l':
-                    cube.rect.left -= dop
-        # изменение изображений персонажа
-        if not pygame.key.get_pressed()[97] and not pygame.key.get_pressed()[100]:
-            if pygame.mouse.get_pos()[0] < player.rect.left + WIDTH_CHELL // 2:
-                player.normal(False)
-            else:
-                player.normal(True)
-        if not pygame.sprite.spritecollideany(blue_portal, construction_group) and \
-                event.type == pfly_event and blue_portal.active and not blue_portal.opened:
-            blue_portal.portal_fly()
-        if not pygame.sprite.spritecollideany(yellow_portal, construction_group) and \
-                event.type == pfly_event and yellow_portal.active and not yellow_portal.opened:
-            yellow_portal.portal_fly()
-        if pygame.sprite.spritecollideany(blue_portal, construction_group) and \
-                not blue_portal.opened and blue_portal.active:
-            blue_portal.portal_open()
-        if pygame.sprite.spritecollideany(yellow_portal, construction_group) and not \
-                yellow_portal.opened and yellow_portal.active:
-            yellow_portal.portal_open()
-        if blue_portal.active and yellow_portal.active and blue_portal.opened and \
-                yellow_portal.opened:
-            if not cube.position:
-                if (pygame.sprite.spritecollideany(cube, blue_portal_group) or
-                    cube.touch_check(blue_portal)) \
-                        and (blue_portal.position == 1 or blue_portal.position == 3):
-                    player.passing_through_portal('blue', 'cube')
-                if (pygame.sprite.spritecollideany(cube, yellow_portal_group) or
-                    cube.touch_check(yellow_portal)) \
-                        and (yellow_portal.position == 1 or yellow_portal.position == 3):
-                    player.passing_through_portal('yellow', 'cube')
-            else:
-                if pygame.sprite.spritecollideany(cube, blue_portal_group) or \
-                        cube.touch_check(blue_portal):
-                    cube.passing_through_portal('blue')
-                if pygame.sprite.spritecollideany(cube, yellow_portal_group) or \
-                        cube.touch_check(yellow_portal):
-                    cube.passing_through_portal('yellow')
-            if pygame.sprite.spritecollideany(player, blue_portal_group):
-                player.passing_through_portal('blue')
-            if pygame.sprite.spritecollideany(player, yellow_portal_group):
-                player.passing_through_portal('yellow')
-        # учет взаимодействия персонажа с потолком
-        if pygame.sprite.spritecollideany(player, ceiling_group) and speed_vertical < 0:
-            speed_vertical = 0
-        # ограничение скорочтей
-        if speed_vertical > 100:
-            speed_vertical = 100
-        if speed_vertical_cube > 100:
-            speed_vertical_cube = 100
-    # выход из цикла при проходе через дверь
-    if player.rect.x + WIDTH_CHELL < 25 or player.rect.x > WIDTH_SCREEN - 25:
-        running = False
-    screen.fill(pygame.Color("orange"))
-    # прорисовка спрайтов
-    door_group.draw(screen)
-    all_sprites.draw(screen)
-    button_group.draw(screen)
-    wire_group.draw(screen)
-    if blue_portal.active:
-        blue_portal_group.draw(screen)
-    if yellow_portal.active:
-        yellow_portal_group.draw(screen)
-    if cube_in_level:
-        cube_group.draw(screen)
-    player_group.draw(screen)
-    if pygame.mouse.get_focused():
-        cursor_group.draw(screen)
-    pygame.display.flip()
-pygame.quit()
+                if indi_right_left == 'r':
+                    if not cube.position:
+                        cube.rect.left += dop
+                    player.rect.left += dop
+                elif indi_right_left == 'l':
+                    if not cube.position:
+                        cube.rect.left -= dop
+                    player.rect.left -= dop
+                if cube.position:
+                    for group in groups[0:2] + [player_group]:
+                        for i in group:
+                            if speed_horizontal_cube > 0:
+                                indi_right_left_cube = 'r'
+                                dop = i.interaction_cube('r', step=speed_horizontal)
+                                if dop is None:
+                                    dop = abs(speed_horizontal_cube)
+                                else:
+                                    break
+                            elif speed_horizontal_cube < 0:
+                                indi_right_left_cube = 'l'
+                                dop = i.interaction_cube('l', step=abs(speed_horizontal_cube))
+                                if dop is None:
+                                    dop = abs(speed_horizontal_cube)
+                                else:
+                                    break
+                    if indi_right_left_cube == 'r':
+                        cube.rect.left += dop
+                    elif indi_right_left_cube == 'l':
+                        cube.rect.left -= dop
+            # изменение изображений персонажа
+            if not pygame.key.get_pressed()[97] and not pygame.key.get_pressed()[100]:
+                if pygame.mouse.get_pos()[0] < player.rect.left + WIDTH_CHELL // 2:
+                    player.normal(False)
+                else:
+                    player.normal(True)
+            if not pygame.sprite.spritecollideany(blue_portal, construction_group) and \
+                    event.type == pfly_event and blue_portal.active and not blue_portal.opened:
+                blue_portal.portal_fly()
+            if not pygame.sprite.spritecollideany(yellow_portal, construction_group) and \
+                    event.type == pfly_event and yellow_portal.active and not yellow_portal.opened:
+                yellow_portal.portal_fly()
+            if pygame.sprite.spritecollideany(blue_portal, construction_group) and \
+                    not blue_portal.opened and blue_portal.active:
+                blue_portal.portal_open()
+            if pygame.sprite.spritecollideany(yellow_portal, construction_group) and not \
+                    yellow_portal.opened and yellow_portal.active:
+                yellow_portal.portal_open()
+            if blue_portal.active and yellow_portal.active and blue_portal.opened and \
+                    yellow_portal.opened:
+                if not cube.position:
+                    if (pygame.sprite.spritecollideany(cube, blue_portal_group) or
+                        cube.touch_check(blue_portal)) \
+                            and (blue_portal.position == 1 or blue_portal.position == 3):
+                        player.passing_through_portal('blue', 'cube')
+                    if (pygame.sprite.spritecollideany(cube, yellow_portal_group) or
+                        cube.touch_check(yellow_portal)) \
+                            and (yellow_portal.position == 1 or yellow_portal.position == 3):
+                        player.passing_through_portal('yellow', 'cube')
+                else:
+                    if pygame.sprite.spritecollideany(cube, blue_portal_group) or \
+                            cube.touch_check(blue_portal):
+                        cube.passing_through_portal('blue')
+                    if pygame.sprite.spritecollideany(cube, yellow_portal_group) or \
+                            cube.touch_check(yellow_portal):
+                        cube.passing_through_portal('yellow')
+                if pygame.sprite.spritecollideany(player, blue_portal_group):
+                    player.passing_through_portal('blue')
+                if pygame.sprite.spritecollideany(player, yellow_portal_group):
+                    player.passing_through_portal('yellow')
+            # учет взаимодействия персонажа с потолком
+            if pygame.sprite.spritecollideany(player, ceiling_group) and speed_vertical < 0:
+                speed_vertical = 0
+            # ограничение скорочтей
+            if speed_vertical > 100:
+                speed_vertical = 100
+            if speed_vertical_cube > 100:
+                speed_vertical_cube = 100
+        # выход из цикла при проходе через дверь
+        if player.rect.x + WIDTH_CHELL < 25 or player.rect.x > WIDTH_SCREEN - 25:
+            win_flag = True
+            running = False
+        screen.fill(pygame.Color("orange"))
+        # прорисовка спрайтов
+        background_group.draw(screen)
+        door_group.draw(screen)
+        all_sprites.draw(screen)
+        wire_group.draw(screen)
+        button_group.draw(screen)
+        if blue_portal.active:
+            blue_portal_group.draw(screen)
+        if yellow_portal.active:
+            yellow_portal_group.draw(screen)
+        if cube_in_level:
+            cube_group.draw(screen)
+        player_group.draw(screen)
+        if pygame.mouse.get_focused():
+            cursor_group.draw(screen)
+        pygame.display.flip()
+    pygame.quit()
+    return win_flag
