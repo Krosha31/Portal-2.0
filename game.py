@@ -769,7 +769,7 @@ class Cube(pygame.sprite.Sprite):
         if cube_in_level:
             self.rect = self.rect.move(x, y)
         else:
-            self.rect = self.rect.move(1, 1)
+            self.rect = self.rect.move(-100, -100)
         self.position = True
 
     def interaction(self, side_of_movement, step=STEP):
