@@ -1576,53 +1576,56 @@ def load_level(): # Загрузка уровня из файла
                  int(lines[k + 6][3]), lines[k + 6][4], interval[0],
                  interval[1], interval[2], interval[3])
 
-    # Дозагрузка всего остального
-    if num_level == 1:
-        cube_in_level = False
-        player = Player(20, 430)
-        cube = Cube(0, 0)
-    elif num_level == 2:
-        cube_in_level = True
-        door_1 = Platform(706, height - 120, 0, 0, '',
-                          [(0, 0)], [(0, 0)], [(0, 0)], [(0, 0)], 'door', 1)
-        button_1 = Button(400, height - 50, door_1,
-                          [Wire(425, 869, 'hor'),
-                           Wire(525, 869, 'hor'),
-                           Wire(625, 869, 'hor')], 0, True)
-        door_2 = Platform(160, 340, 0, 0, '',
-                          [(0, 0)], [(0, 0)], [(0, 0)], [(0, 0)], 'door', 2)
-        button_2 = Button(width - 750, 410, door_2,
-                          [Wire(width - 720, 418, 'hor'), Wire(width - 680, 378, 'ver'),
-                           Wire(width - 680, 278, 'ver'), Wire(width - 680, 178, 'ver'),
-                           Wire(width - 720, 138, 'hor'), Wire(width - 720, 138, 'hor'),
-                           Wire(width - 820, 138, 'hor'), Wire(width - 920, 138, 'hor'),
-                           Wire(width - 1020, 138, 'hor'), Wire(width - 1120, 138, 'hor'),
-                           Wire(width - 1220, 138, 'hor'), Wire(width - 1320, 138, 'hor'),
-                           Wire(width - 1378, 178, 'ver'), Wire(width - 1378, 240, 'ver')], 0, True)
-        button_3 = Button(400, 610, door_2,
-                          [Wire(340, 617, 'hor'), Wire(240, 617, 'hor'),
-                           Wire(140, 617, 'hor'), Wire(40, 617, 'hor'),
-                           Wire(-20, 577, 'ver'), Wire(-20, 479, 'ver'),
-                           Wire(-20, 440, 'ver'), Wire(40, 400, 'hor'),
-                           Wire(80, 400, 'hor')], 1, True)
-        player = Player(20, 800)
-        cube = Cube(270, 800)
-    elif num_level == 3:
-        cube_in_level = False
-        player = Player(150, 870)
-        cube = Cube(0, 0)
-    elif num_level == 4:
-        cube_in_level = True
-        hameleon = Platform(550, 20, 40, 560, '', [(20, 580)],
-                            [(0, 0)], [(0, 0)], [(550, 570)], 'hameleon', 1)
-        button_wire_list = [Wire(590, -20, 'hor'), Wire(690, -20, 'hor'),
-                            Wire(790, -20, 'hor'), Wire(890, -20, 'hor'),
-                            Wire(990, -20, 'hor'), Wire(1090, -20, 'hor'),
-                            Wire(1190, -20, 'hor'), Wire(1230, 40, 'ver'),
-                            Wire(1230, 140, 'ver'), Wire(1190, 180, 'hor')]
-        button = Button(1155, 188, hameleon, button_wire_list, 0)
-        cube = Cube(21, 320)
-        player = Player(150, 670)
+    # Загрузка персонажа
+    last_str = cnt_platforms + 6
+    player = Player(int(lines[last_str][0]), int(lines[last_str][1]))
+
+    # Загрузка куба
+    cube_in_level = bool(int(int(lines[last_str + 1][0])))
+    cube = Cube(int(lines[last_str + 2][0]), int(lines[last_str + 2][1]))
+
+    obj_for_buttons = []
+
+    # Загрузка дверей
+    last_str += 3
+    cnt_doors = int(lines[last_str][0])
+    last_str += 1
+    for k in range(cnt_doors):
+        door = Platform(int(lines[last_str + k][0]), int(lines[last_str + k][1]), int(lines[last_str + k][2]),
+                        int(lines[last_str + k][3]), '', [(0, 0)], [(0, 0)],
+                        [(0, 0)], [(0, 0)], lines[last_str + k][4], int(lines[last_str + k][5]))
+        obj_for_buttons.append(door)
+
+    # Загрузка стен-хамелеонов
+    last_str += cnt_doors
+    cnt_hameleons = int(lines[last_str][0])
+    last_str += 1
+    for k in range(cnt_hameleons):
+        hameleon = Platform(int(lines[last_str + k][0]), int(lines[last_str + k][1]), int(lines[last_str + k][2]),
+                            int(lines[last_str + k][3]), '',
+                            [(int(lines[last_str + k][4]), int(lines[last_str + k][5]))],
+                            [(int(lines[last_str + k][6]), int(lines[last_str + k][7]))],
+                            [(int(lines[last_str + k][8]), int(lines[last_str + k][9]))],
+                            [(int(lines[last_str + k][10]), int(lines[last_str + k][11]))],
+                            lines[last_str + k][12], int(lines[last_str + k][13]))
+        obj_for_buttons.append(hameleon)
+
+    # Загрузка кнопок
+    last_str += cnt_hameleons
+    cnt_buttons = int(lines[last_str][0])
+    last_str += 1
+    for k in range(cnt_buttons):
+        button_wire_list = []
+        now_j = 4
+        for i in range(int(lines[last_str + k][3])):
+            button_wire_list.append(Wire(int(lines[last_str + k][now_j]),
+                                         int(lines[last_str + k][now_j + 1]),
+                                         lines[last_str + k][now_j + 2]))
+            now_j += 3
+        button = Button(int(lines[last_str + k][0]), int(lines[last_str + k][1]),
+                        obj_for_buttons[int(lines[last_str + k][2])], button_wire_list,
+                        int(lines[last_str + k][now_j]), bool(int(lines[last_str + k][now_j + 1])))
+
 
     # Запуск главного цикла
     return game_cycle(screen, size, num_level, floor, wall_left, wall_right)
@@ -1660,10 +1663,15 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
     go_sound.set_volume(0.05)
     groups = [platform_group, button_group, cube_group]
     win_flag = False
+    pause_flag = False
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                pause_flag = not pause_flag
+            if pause_flag:
+                continue
             if event.type == pygame.MOUSEMOTION:
                 # курсор находится не в левом углу изображения, а в середине
                 cursor.rect.left = event.pos[0] - 25
