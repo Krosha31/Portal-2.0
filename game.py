@@ -13,6 +13,10 @@ WIDTH_BLUE_ARROW = 45
 HEIGHT_BLUE_ARROW = 70
 WIDTH_RED_ARROW = 80
 HEIGHT_RED_ARROW = 53
+WIDTH_DOOR = 20
+HEIGHT_DOOR = 100
+WIDTH_PANEL = 100
+HEIGHT_PANEL = 20
 STEP = 20
 ZERO_SPEED = 5
 walking_event = 25
@@ -544,6 +548,18 @@ class WallFloorCelling(pygame.sprite.Sprite):  # класс стен, потол
         self.rect = self.rect.move(x, y)
 
 
+class AirPanel(pygame.sprite.Sprite):  # Класс воздушных панелей
+    def __init__(self, x, y, x_speed, y_speed):  # Загрузка изображения воздушной панели
+        super().__init__(all_sprites, construction_group, panel_group)
+        self.color = 'black'
+        self.x_speed = x_speed
+        self.y_speed = -y_speed
+        self.image = load_image('air panel.gif')
+        self.image = pygame.transform.scale(self.image, (WIDTH_PANEL, HEIGHT_PANEL))
+        self.rect = self.image.get_rect()
+        self.rect = self.rect.move(x, y)
+
+
 class Platform(pygame.sprite.Sprite):
     # класс платформ, который включает в себя еще и двери
     # загрузка изображений платформ или двери
@@ -558,8 +574,8 @@ class Platform(pygame.sprite.Sprite):
         elif p_type == 'door':
             super().__init__(construction_group, platform_group, door_group)
             color = 'black'
-            w = 20
-            h = 100
+            w = WIDTH_DOOR
+            h = HEIGHT_DOOR
             self.image = load_image('door.gif')
             self.y = y
             self.speed = 1
@@ -1507,7 +1523,7 @@ class Portal(pygame.sprite.Sprite):
 def reinit_groups():  # Обнуление всего, инициализация групп
     global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, construction_group, \
         platform_group, door_group, wire_group, button_group, background_group, cube_group, player_group, \
-        cursor_group, cube_in_level, blue_portal_group, yellow_portal_group, arrow_group
+        cursor_group, cube_in_level, blue_portal_group, yellow_portal_group, arrow_group, panel_group
     walking_event = 25
     pygame.time.set_timer(walking_event, 100)
     svobod_pad_event = 24
@@ -1534,13 +1550,14 @@ def reinit_groups():  # Обнуление всего, инициализаци�
     button_group = pygame.sprite.Group()
     background_group = pygame.sprite.Group()
     arrow_group = pygame.sprite.Group()
+    panel_group = pygame.sprite.Group()
 
 
 def load_level(): # Загрузка уровня из файла
     global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, \
         construction_group, platform_group, door_group, wire_group, button_group, \
         cube_in_level, player, cube, blue_portal, yellow_portal, cursor, background_group, \
-        arrow_group
+        arrow_group, panel_group
     # Чтение файла
     file_level = open('data/save.txt', encoding='utf8')
     num_level = int(file_level.read().split()[0])
@@ -1670,7 +1687,8 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
     global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, construction_group, \
         platform_group, door_group, wire_group, button_group, player, cube, blue_portal, yellow_portal, cursor, \
         speed_vertical, speed_horizontal, speed_vertical_cube, speed_horizontal_cube, speed_ver_rez, speed_hor_rez, \
-        speed_ver_rez_cube, speed_hor_rez_cube, player_left_cube, player_right_cube, background_group, arrow_group
+        speed_ver_rez_cube, speed_hor_rez_cube, player_left_cube, player_right_cube, background_group, arrow_group, \
+        panel_group
     # декоративные элементы окна
     pygame.display.set_caption('Portal 2D')
     pygame.display.set_icon(pygame.image.load('data/icon.gif'))
@@ -1754,6 +1772,22 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                     cube.position = True
                     speed_vertical_cube = 1
                     player_left_cube = player_right_cube = 0
+            if pygame.sprite.spritecollideany(player, panel_group):
+                panel = pygame.sprite.spritecollide(player, panel_group, False)[0]
+                if player.rect.y + HEIGHT_CHELL - 15 <= panel.rect.y + HEIGHT_PANEL and \
+                        panel.rect.x - WIDTH_CHELL + 50 <= player.rect.x <= panel.rect.x + WIDTH_PANEL - 50:
+                    if not cube.position:
+                        cube.rect.y -= abs(player.rect.y - (panel.rect.y - HEIGHT_CHELL))
+                    player.rect.y = panel.rect.y - HEIGHT_CHELL
+                    speed_horizontal = panel.x_speed
+                    speed_vertical = panel.y_speed
+            if pygame.sprite.spritecollideany(cube, panel_group):
+                panel = pygame.sprite.spritecollide(cube, panel_group, False)[0]
+                if cube.rect.y + HEIGHT_CUBE - 5 <= panel.rect.y + HEIGHT_PANEL and \
+                        panel.rect.x - WIDTH_CUBE <= cube.rect.x <= panel.rect.x + WIDTH_PANEL - WIDTH_CUBE:
+                    cube.rect.y = panel.rect.y - HEIGHT_CUBE
+                    speed_horizontal_cube = panel.x_speed
+                    speed_vertical_cube = panel.y_speed
             if event.type == walking_event and pygame.key.get_pressed()[97]:
                 # движение влево с учетом взаимодействий
                 pygame.mixer.Sound.play(go_sound)
@@ -1846,7 +1880,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                     player.update(True, False)
                 else:
                     player.update(True, True)
-            # обнуление горизонтальной скорости при встрече мтен
+            # обнуление горизонтальной скорости при встрече стен
             if speed_horizontal < 0 and pygame.sprite.spritecollideany(player, wall_left_group):
                 player.rect.x = wall_left.rect.x - 4
                 speed_horizontal = 0
