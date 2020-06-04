@@ -256,14 +256,14 @@ class MainWindow(QMainWindow):
             max_level = max(num_level, max_level)
             num_level += 1
             file_level = open('data/save.txt', 'w')
-            file_level.write(str(num_level) + ' ' + str(max_level))
+            file_level.write(str(num_level) + ' ' + str(max_level) + ' test')
             file_level.close()
             self.reinit_pygame()
             reinit_groups()
             win_flag = load_level()
         if num_level == 4 and win_flag:
             file_level = open('data/save.txt', 'w')
-            file_level.write(str(num_level) + ' ' + str(max_level + 1))
+            file_level.write(str(num_level) + ' ' + str(max_level + 1) + ' test')
             file_level.close()
             reinit_groups()
             self.win = FinishWindow()
