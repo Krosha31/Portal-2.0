@@ -20,19 +20,21 @@ WIDTH_PANEL = 100
 HEIGHT_PANEL = 20
 HEIGHT_BRIDGE = 20
 STEP = 20
+speed_vertical = speed_horizontal = 0
 ZERO_SPEED = 5
 walking_event = 25
 pygame.time.set_timer(walking_event, 100)
 svobod_pad_event = 24
 pygame.time.set_timer(svobod_pad_event, 25)
 pfly_event = 26
-pygame.time.set_timer(pfly_event, 1)
+pygame.time.set_timer(pfly_event, 25)
 door_event = 23
 t_bridge_event = 22
 pygame.time.set_timer(t_bridge_event, 100)
 cube_in_level = True
+speed_bullet = 10
+pygame.time.set_timer(door_event, 100)
 bridge_in_level = True
-pygame.time.set_timer(door_event, 1)
 player_group = pygame.sprite.Group()
 blue_portal_group = pygame.sprite.Group()
 yellow_portal_group = pygame.sprite.Group()
@@ -52,6 +54,18 @@ def load_image(name, colorkey=None):  # Загрузка изображения
     else:
         image = image.convert_alpha()
     return image
+
+
+def death():
+    print('СДОХ!')
+
+
+def cross(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2):
+    v1 = (bx2 - bx1) * (ay1 - by1) - (by2 - by1) * (ax1 - bx1)
+    v2 = (bx2 - bx1) * (ay2 - by1) - (by2 - by1) * (ax2 - bx1)
+    v3 = (ax2 - ax1) * (by1 - ay1) - (ay2 - ay1) * (bx1 - ax1)
+    v4 = (ax2 - ax1) * (by2 - ay1) - (ay2 - ay1) * (bx2 - ax1)
+    return v1 * v2 <= 0 and v3 * v4 <= 0
 
 
 def chell_pass_to_portal(self, color):
@@ -544,6 +558,8 @@ class WallFloorCelling(pygame.sprite.Sprite):  # класс стен, потол
             self.image = load_image('grey.png')
         elif color == 'black':
             self.image = load_image('black.png')
+        self.w = w
+        self.h = h
         self.image = pygame.transform.scale(self.image, (w, h))
         self.mask = pygame.mask.from_surface(self.image)
         self.group = group
@@ -896,6 +912,8 @@ class Cube(pygame.sprite.Sprite):
         self.color = 'black'
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
+        self.w = WIDTH_CUBE
+        self.h = HEIGHT_CUBE
         if cube_in_level:
             self.rect = self.rect.move(x, y)
         else:
@@ -1154,6 +1172,8 @@ class Button(pygame.sprite.Sprite):
         self.image = load_image('button.gif')
         self.x = x
         self.y = y
+        self.w = 69
+        self.h = 48
         self.control_thing = control_thing
         self.wire_list = wire_list
         self.thing_arg = thing_arg
@@ -1625,6 +1645,57 @@ class Portal(pygame.sprite.Sprite):
             self.portal_adjustment_floor_ceiling('f', self.image_list[1])
 
 
+class Turret(pygame.sprite.Sprite):
+    def __init__(self, x, y, napr):
+        super().__init__(all_sprites, construction_group, turret_group)
+        self.napr = napr
+        if napr == "right":
+            self.image = load_image('turret_right.gif')
+        else:
+            self.image = load_image('turret_left.gif')
+        self.w = 70
+        self.h = 70
+        self.life = True
+        self.color = 'black'
+        self.image = pygame.transform.scale(self.image, (self.w, self.h))
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect = self.image.get_rect()
+        self.rect = self.rect.move(x, y)
+
+
+    def death(self):
+        global speed_vertical, speed_horizontal
+        speed_vertical = speed_horizontal = 0
+        self.image = load_image('turret_right.gif')
+        self.image = pygame.transform.scale(self.image, (70, 20))
+        self.h = 20
+        self.rect.top += 50
+
+
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, x1, y1, x2, y2, napr, turret):
+        super().__init__(bullet_group)
+        self.napr = napr
+        self.image = load_image('bullet.gif')
+        self.x = x1 - x2
+        self.y = y1 - y2
+        self.x2 = x2
+        self.y2 = y2
+        self.w = 9
+        self.h = 9
+        k = self.y / self.x
+        self.xplus = ((speed_bullet ** 2) / (1 + k * k)) ** 0.5
+        if self.napr == "left":
+            self.xplus = -self.xplus
+        self.yplus = round(self.xplus * k)
+        self.turret = turret
+        self.color = 'black'
+        self.image = pygame.transform.scale(self.image, (self.w, self.h))
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect = self.image.get_rect()
+        self.rect = self.rect.move(x2, y2)
+        
+        
 def draw_text(screen, message, size_font, x, y, flag=False):  # Функция рисования текста
     font = pygame.font.SysFont("arial", size_font)
     text = font.render(message, 1, (255, 255, 255))
@@ -1735,18 +1806,22 @@ def reinit_groups():  # Обнуление всего, инициализаци�
     global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, construction_group, \
         platform_group, door_group, wire_group, button_group, background_group, cube_group, player_group, \
         cursor_group, cube_in_level, blue_portal_group, yellow_portal_group, pause_group, arrow_group, \
-        panel_group, bridge_group, bridge_in_level
+        panel_group, bridge_group, bridge_in_level, turret_group, bullet_event, bullet_group, \
+        bullet_move_event
     walking_event = 25
     pygame.time.set_timer(walking_event, 100)
     svobod_pad_event = 24
-    pygame.time.set_timer(svobod_pad_event, 25)
+    pygame.time.set_timer(svobod_pad_event, 12)
     pfly_event = 26
     pygame.time.set_timer(pfly_event, 1)
     door_event = 23
     pygame.time.set_timer(door_event, 1)
+    bullet_move_event = 20
+    pygame.time.set_timer(bullet_move_event, 2)
     t_bridge_event = 22
     pygame.time.set_timer(t_bridge_event, 100)
     player_group = pygame.sprite.Group()
+    turret_group = pygame.sprite.Group()
     blue_portal_group = pygame.sprite.Group()
     yellow_portal_group = pygame.sprite.Group()
     cursor_group = pygame.sprite.Group()
@@ -1755,6 +1830,7 @@ def reinit_groups():  # Обнуление всего, инициализаци�
     all_sprites = pygame.sprite.Group()
     wall_left_group = pygame.sprite.Group()
     wall_right_group = pygame.sprite.Group()
+    bullet_group = pygame.sprite.Group()
     floor_group = pygame.sprite.Group()
     ceiling_group = pygame.sprite.Group()
     construction_group = pygame.sprite.Group()
@@ -1773,7 +1849,8 @@ def load_level(filename='data/save.txt'): # Загрузка уровня из �
     global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, \
         construction_group, platform_group, door_group, wire_group, button_group, \
         cube_in_level, player, cube, blue_portal, yellow_portal, cursor, background_group, \
-        arrow_group, panel_group, bridge_group, bridge_1, bridge_2, pause_group, num_level, bridge_in_level
+        arrow_group, panel_group, bridge_group, bridge_1, bridge_2, pause_group, num_level, \
+        bridge_in_level, turret_group, bullet_event, bullet_group
     # Чтение файла
     file_level = open(filename, encoding='utf8')
     if filename != 'data/save.txt':
@@ -1946,8 +2023,21 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
         platform_group, door_group, wire_group, button_group, player, cube, blue_portal, yellow_portal, cursor, \
         speed_vertical, speed_horizontal, speed_vertical_cube, speed_horizontal_cube, speed_ver_rez, speed_hor_rez, \
         speed_ver_rez_cube, speed_hor_rez_cube, player_left_cube, player_right_cube, background_group, arrow_group, \
-        panel_group, bridge_group, bridge_1, bridge_2, pause_group, pause_flag, running, win_flag, now_screen
+        panel_group, bridge_group, bridge_1, bridge_2, pause_group, pause_flag, running, win_flag, now_screen, \
+        turret_group, bullet_group
     # декоративные элементы окна
+    coords_static = []
+    for object in construction_group:
+        if object == cube or object in platform_group and object.p_type == 'door':
+            continue
+        coords_static.append([[object.rect.left, object.rect.top,
+                       object.rect.left + object.w, object.rect.top],
+                              [object.rect.left, object.rect.top,
+                       object.rect.left, object.rect.top + object.h],
+                              [object.rect.left, object.rect.top + object.h,
+                       object.rect.left + object.w, object.rect.top + object.h],
+                              [object.rect.left + object.w, object.rect.top,
+                       object.rect.left + object.w, object.rect.top + object.h]])
     pygame.display.set_caption('Portal 2D')
     pygame.display.set_icon(pygame.image.load('data/icon.gif'))
     # объявление некоторых переменных
@@ -1955,6 +2045,13 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
     HEIGHT_SCREEN = size[1]
     running = True
     speed_vertical = speed_horizontal = 0
+    speed_bullet = 10
+    count = 0
+    number = 10000
+    if len(turret_group) != 0:
+        number = 800 // len(turret_group)
+    bullet_event = 22
+    pygame.time.set_timer(bullet_event, number)
     speed_vertical_cube = 1
     speed_horizontal_cube = 0
     speed_ver_rez = speed_hor_rez = 0
@@ -2000,7 +2097,8 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
             if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
                 # взятие куба в руки
                 if pygame.sprite.spritecollideany(player, cube_group) and cube.position:
-                    if player.rect.top + HEIGHT_CHELL // 2 + 10 > cube.rect.y:
+                    if (((player.rect.top + HEIGHT_CHELL // 2 + 10 > cube.rect.y and
+                          player.rect.top + HEIGHT_CHELL - 35 < cube.rect.top + HEIGHT_CUBE))):
                         # если куб справа
                         if player.rect.left < cube.rect.left:
                             cube.rect.left = player.rect.left + WIDTH_CHELL - 25
@@ -2267,14 +2365,28 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                 # прыжок(или вылет из поратала) с учетом взаимодействия с платформами, кубом, кнопками
                 elif speed_vertical < 0:
                     dop = abs(speed_vertical)
-                    for group in groups[0:1]:
-                        for i in group:
-                            dop = i.interaction('v')
-                            if dop is None:
-                                dop = abs(speed_vertical)
-                                continue
-                            else:
+                    if not cube.position:
+                        for group in groups[0:1]:
+                            for i in group:
+                                dop = i.interaction('v')
+                                if dop is None:
+                                    dop = abs(speed_vertical)
+                                    continue
+                                else:
+                                    break
+                    else:
+                        dop_flag = False
+                        for group in (groups[0:1] + [groups[2]]):
+                            if dop_flag:
                                 break
+                            for i in group:
+                                dop = i.interaction('v')
+                                if dop is None:
+                                    dop = abs(speed_vertical)
+                                    continue
+                                else:
+                                    dop_flag = True
+                                    break
                     if not cube.position:
                         cube.rect.top -= dop
                     player.rect.top -= dop
@@ -2410,6 +2522,92 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                         cube.rect.left += dop
                     elif indi_right_left_cube == 'l':
                         cube.rect.left -= dop
+            for turret in turret_group:
+                if turret.life:
+                    if pygame.sprite.collide_mask(turret, player):
+                        turret.death()
+                        turret.life = False
+            if event.type == bullet_event:
+                dop_count = 0
+                if len(turret_group) != 0:
+                    count %= len(turret_group)
+                    for turret in turret_group:
+                        if dop_count == count:
+                            count += 1
+                            break
+                        dop_count += 1
+                if len(turret_group) != 0 and turret.life:
+                    x1 = player.rect.left + WIDTH_CHELL // 2
+                    y1 = player.rect.top + HEIGHT_CHELL // 2
+                    if turret.napr == 'right':
+                        x2 = turret.rect.left + 55
+                        y2 = turret.rect.top + 30
+                    else:
+                        x2 = turret.rect.left + 15
+                        y2 = turret.rect.top + 30
+                    if turret.napr == "right" and player.rect.left + WIDTH_CHELL // 2 > \
+                            turret.rect.left + turret.w // 2 or turret.napr == "left" and\
+                            player.rect.left + WIDTH_CHELL // 2 < turret.rect.left + turret.w // 2:
+                        for object in coords_static:
+                            if turret.rect.top < object[0][1]:
+                                result = cross(x1, y1, x2, y2, object[0][0], object[0][1],
+                                    object[0][2], object[0][3])
+                                if result:
+                                    break
+                            if turret.rect.left < object[0][0]:
+                                result = cross(x1, y1, x2, y2, object[1][0], object[1][1],
+                                               object[1][2], object[1][3])
+                                if result:
+                                    break
+                            if turret.rect.top > object[0][1]:
+                                result = cross(x1, y1, x2, y2, object[2][0], object[2][1],
+                                               object[2][2], object[2][3])
+                                if result:
+                                    break
+                            if turret.rect.left > object[0][0]:
+                                result = cross(x1, y1, x2, y2, object[3][0], object[3][1],
+                                               object[3][2], object[3][3])
+                                if result:
+                                    break
+                        if not result:
+                            for group in [door_group]:
+                                for object in group:
+                                    if object == turret or object == cube:
+                                        continue
+                                    if turret.rect.top < object.rect.top:
+                                        result = cross(x1, y1, x2, y2, object.rect.left, object.rect.top,
+                                            object.rect.left + object.w, object.rect.top)
+                                        if result:
+                                            break
+                                    if turret.rect.left < object.rect.left:
+                                        result = cross(x1, y1, x2, y2, object.rect.left, object.rect.top,
+                                            object.rect.left, object.rect.top + object.h)
+                                        if result:
+                                            break
+                                    if turret.rect.top > object.rect.top:
+                                        result = cross(x1, y1, x2, y2, object.rect.left, object.rect.top + object.h,
+                                            object.rect.left + object.w, object.rect.top + object.h)
+                                        if result:
+                                            break
+                                    if turret.rect.left > object.rect.left:
+                                        result = cross(x1, y1, x2, y2, object.rect.left + object.w, object.rect.top,
+                                            object.rect.left + object.w, object.rect.top + object.h)
+                                        if result:
+                                            break
+                        if turret.napr == 'right' and not result:
+                            Bullet(x1, y1, x2, y2, 'right', turret)
+                        elif not result:
+                            Bullet(x1, y1, x2, y2, 'left', turret)
+            if event.type == bullet_move_event:
+                for bullet in bullet_group:
+                    bullet.rect.left += bullet.xplus
+                    bullet.rect.top += bullet.yplus
+                    if pygame.sprite.collide_mask(bullet, player):
+                        bullet.kill()
+                        death()
+                    elif pygame.sprite.spritecollideany(bullet, construction_group) and not \
+                            pygame.sprite.spritecollideany(bullet, turret_group):
+                        bullet.kill()
             # изменение изображений персонажа
             if not pygame.key.get_pressed()[97] and not pygame.key.get_pressed()[100]:
                 if pygame.mouse.get_pos()[0] < player.rect.left + WIDTH_CHELL // 2:
@@ -2476,6 +2674,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
         all_sprites.draw(screen)
         wire_group.draw(screen)
         button_group.draw(screen)
+        bullet_group.draw(screen)
         arrow_group.draw(screen)
         if bridge_in_level:
             bridge_group.draw(screen)
