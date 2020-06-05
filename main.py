@@ -351,7 +351,10 @@ class MainWindow(QMainWindow):
         self.reinit_pygame()
         self.hide()
         reinit_groups()
-        win_flag = load_level()
+        try:
+            win_flag = load_level()
+        except Exception as error:
+            print(error)
         reinit_groups()
 
         while num_level < 4 and win_flag == 1:
