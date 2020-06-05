@@ -17,6 +17,7 @@ WIDTH_DOOR = 20
 HEIGHT_DOOR = 100
 WIDTH_PANEL = 100
 HEIGHT_PANEL = 20
+HEIGHT_BRIDGE = 20
 STEP = 20
 ZERO_SPEED = 5
 walking_event = 25
@@ -26,6 +27,8 @@ pygame.time.set_timer(svobod_pad_event, 25)
 pfly_event = 26
 pygame.time.set_timer(pfly_event, 1)
 door_event = 23
+t_bridge_event = 22
+pygame.time.set_timer(t_bridge_event, 100)
 cube_in_level = True
 pygame.time.set_timer(door_event, 1)
 player_group = pygame.sprite.Group()
@@ -98,8 +101,8 @@ def cube_pass_to_portal(self, color):
     global speed_horizontal_cube
     if color == 'blue':
         if blue_portal.position == 1 or blue_portal.position == 3:
-            if blue_portal.rect.y <= self.rect.y <= blue_portal.rect.y + HEIGHT_PORTAL and \
-                    blue_portal.rect.y <= self.rect.y + HEIGHT_CUBE <= blue_portal.rect.y \
+            if blue_portal.rect.y <= self.rect.y + 5 <= blue_portal.rect.y + HEIGHT_PORTAL and \
+                    blue_portal.rect.y <= self.rect.y + HEIGHT_CUBE - 5 <= blue_portal.rect.y \
                     + HEIGHT_PORTAL:
                 if (blue_portal.position == 1 and self.rect.x + WIDTH_CUBE >= blue_portal.rect.x
                     and (speed_horizontal_cube > 0 or not cube.position)) or \
@@ -117,8 +120,8 @@ def cube_pass_to_portal(self, color):
                     return True
     elif color == 'yellow':
         if yellow_portal.position == 1 or yellow_portal.position == 3:
-            if yellow_portal.rect.y <= self.rect.y <= yellow_portal.rect.y + HEIGHT_PORTAL and \
-                    yellow_portal.rect.y <= self.rect.y + HEIGHT_CUBE <= \
+            if yellow_portal.rect.y <= self.rect.y + 5 <= yellow_portal.rect.y + HEIGHT_PORTAL and \
+                    yellow_portal.rect.y <= self.rect.y + HEIGHT_CUBE - 5 <= \
                     yellow_portal.rect.y + HEIGHT_PORTAL:
                 if (yellow_portal.position == 1 and
                     self.rect.x + WIDTH_CUBE >= yellow_portal.rect.x
@@ -564,7 +567,7 @@ class Platform(pygame.sprite.Sprite):
     # класс платформ, который включает в себя еще и двери
     # загрузка изображений платформ или двери
     def __init__(self, x, y, w, h, color, int_sp_1, int_sp_2, int_sp_3,
-                 int_sp_4, p_type='n', act_list_l=0, speed_k=1):
+                 int_sp_4, p_type='n', act_list_l=0, speed_k=1, course=1):
         if p_type == 'n':
             super().__init__(all_sprites, construction_group, platform_group)
             if color == 'grey':
@@ -585,6 +588,18 @@ class Platform(pygame.sprite.Sprite):
             self.image = load_image('black.png')
             self.w = w
             self.h = h
+        elif p_type == 'bridge':
+            super().__init__(all_sprites, construction_group, platform_group, bridge_group)
+            color = 'no'
+            self.course = course
+            if course == 1:
+                self.w = w
+                self.h = HEIGHT_BRIDGE
+                self.image = load_image('light bridge hor.png')
+            elif course == 2:
+                self.w = HEIGHT_BRIDGE
+                self.h = w
+                self.image = load_image('light bridge ver.png')
         self.activated_list = [False] * act_list_l
         self.activated_list_len = act_list_l
         self.p_type = p_type
@@ -785,6 +800,74 @@ class Platform(pygame.sprite.Sprite):
                 yellow_portal.active = False
                 yellow_portal.opened = False
 
+    def teleport(self, portal, WIDTH_SCREEN, HEIGHT_SCREEN):
+        if portal.position == 1:
+            self.image = load_image('light bridge hor.png')
+            self.image = pygame.transform.scale(self.image, (portal.rect.x, HEIGHT_BRIDGE))
+            self.rect = self.image.get_rect()
+            self.rect.x = 0
+            self.rect.y = portal.rect.y + HEIGHT_PORTAL - HEIGHT_BRIDGE
+            self_list = pygame.sprite.spritecollide(self, construction_group, False)
+            max_x = 0
+            for thing in self_list:
+                if thing.color != 'no':
+                    if thing.rect.x + thing.rect.width > max_x:
+                        max_x = thing.rect.x + thing.rect.width
+            self.image = pygame.transform.scale(self.image, (portal.rect.x - max_x, HEIGHT_BRIDGE))
+            self.rect = self.image.get_rect()
+            self.rect.x = max_x
+            self.rect.y = portal.rect.y + HEIGHT_PORTAL - HEIGHT_BRIDGE
+        elif portal.position == 3:
+            self.image = load_image('light bridge hor.png')
+            self.image = pygame.transform.scale(self.image, (WIDTH_SCREEN - portal.rect.x -
+                                                                     WIDTH_PORTAL, HEIGHT_BRIDGE))
+            self.rect = self.image.get_rect()
+            self.rect.x = portal.rect.x + WIDTH_PORTAL
+            self.rect.y = portal.rect.y + HEIGHT_PORTAL - HEIGHT_BRIDGE
+            self_list = pygame.sprite.spritecollide(self, construction_group, False)
+            min_x = WIDTH_SCREEN
+            for thing in self_list:
+                if thing.color != 'no':
+                    if thing.rect.x < min_x:
+                        min_x = thing.rect.x
+            self.image = pygame.transform.scale(self.image, (min_x - portal.rect.x - WIDTH_PORTAL, HEIGHT_BRIDGE))
+            self.rect = self.image.get_rect()
+            self.rect.x = portal.rect.x + WIDTH_PORTAL
+            self.rect.y = portal.rect.y + HEIGHT_PORTAL - HEIGHT_BRIDGE
+        elif portal.position == 2:
+            self.image = load_image('light bridge ver.png')
+            self.image = pygame.transform.scale(self.image, (HEIGHT_BRIDGE, portal.rect.y))
+            self.rect = self.image.get_rect()
+            self.rect.x = portal.rect.x + HEIGHT_PORTAL - HEIGHT_BRIDGE
+            self.rect.y = 0
+            self_list = pygame.sprite.spritecollide(self, construction_group, False)
+            max_y = 0
+            for thing in self_list:
+                if thing.color != 'no':
+                    if thing.rect.y + thing.rect.height > max_y:
+                        max_y = thing.rect.y + thing.rect.height
+            self.image = pygame.transform.scale(self.image, (HEIGHT_BRIDGE, portal.rect.y - max_y))
+            self.rect = self.image.get_rect()
+            self.rect.x = portal.rect.x + HEIGHT_PORTAL - HEIGHT_BRIDGE
+            self.rect.y = max_y
+        elif portal.position == 4:
+            self.image = load_image('light bridge ver.png')
+            self.image = pygame.transform.scale(self.image, (HEIGHT_BRIDGE, HEIGHT_SCREEN -
+                                                             portal.rect.y - WIDTH_PORTAL))
+            self.rect = self.image.get_rect()
+            self.rect.x = portal.rect.x + HEIGHT_PORTAL - HEIGHT_BRIDGE
+            self.rect.y = portal.rect.y + WIDTH_PORTAL
+            self_list = pygame.sprite.spritecollide(self, construction_group, False)
+            min_y = HEIGHT_SCREEN
+            for thing in self_list:
+                if thing.color != 'no':
+                    if thing.rect.y < min_y:
+                        min_y = thing.rect.y
+            self.image = pygame.transform.scale(self.image, (HEIGHT_BRIDGE, min_y - portal.rect.y - WIDTH_PORTAL))
+            self.rect = self.image.get_rect()
+            self.rect.x = portal.rect.x + HEIGHT_PORTAL - HEIGHT_BRIDGE
+            self.rect.y = portal.rect.y + WIDTH_PORTAL
+
 
 class Cube(pygame.sprite.Sprite):
     # класс куба, загрузка изображения куба в зависимости от типа
@@ -895,7 +978,7 @@ class Cube(pygame.sprite.Sprite):
                 self.teleport('blue', yellow_portal.position)
 
     def teleport(self, color, position):
-        # телепортирование куба, сохранение скоростей, двигание персонажа кубом при телепортации при необходимости
+        # телепортирование куба, сохранение скоростей, двигание куба или персонажа при необходимости
         global speed_vertical_cube, speed_horizontal_cube, speed_ver_rez_cube, speed_hor_rez_cube
         teleport_sound = pygame.mixer.Sound('data/teleport_sound.wav')
         pygame.mixer.Sound.play(teleport_sound)
@@ -964,6 +1047,14 @@ class Cube(pygame.sprite.Sprite):
                 elif position == 4:
                     speed_vertical_cube = -speed_vertical_cube
                 speed_horizontal_cube = 0
+            if blue_portal.position == 1 or blue_portal.position == 3:
+                while len(pygame.sprite.spritecollide(cube, bridge_group, False)) > 0:
+                    self.rect.y -= 1
+                self.rect.y -= 1
+            elif blue_portal.position == 2 or blue_portal.position == 4:
+                while len(pygame.sprite.spritecollide(cube, bridge_group, False)) > 0:
+                    self.rect.x -= 1
+                self.rect.x -= 1
         elif color == 'yellow':
             if yellow_portal.position == 1:
                 self.rect.x = yellow_portal.rect.x - WIDTH_CUBE - 1
@@ -1021,6 +1112,14 @@ class Cube(pygame.sprite.Sprite):
                 elif position == 4:
                     speed_vertical_cube = -speed_vertical_cube
                 speed_horizontal_cube = 0
+            if yellow_portal.position == 1 or yellow_portal.position == 3:
+                while len(pygame.sprite.spritecollide(cube, bridge_group, False)) > 0:
+                    self.rect.y -= 1
+                self.rect.y -= 1
+            elif yellow_portal.position == 2 or yellow_portal.position == 4:
+                while len(pygame.sprite.spritecollide(cube, bridge_group, False)) > 0:
+                    self.rect.x -= 1
+                self.rect.x -= 1
 
     def touch_check(self, portal):
         # проверка касания кубом порталов
@@ -1523,7 +1622,7 @@ class Portal(pygame.sprite.Sprite):
 def reinit_groups():  # Обнуление всего, инициализация групп
     global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, construction_group, \
         platform_group, door_group, wire_group, button_group, background_group, cube_group, player_group, \
-        cursor_group, cube_in_level, blue_portal_group, yellow_portal_group, arrow_group, panel_group
+        cursor_group, cube_in_level, blue_portal_group, yellow_portal_group, arrow_group, panel_group, bridge_group
     walking_event = 25
     pygame.time.set_timer(walking_event, 100)
     svobod_pad_event = 24
@@ -1532,6 +1631,8 @@ def reinit_groups():  # Обнуление всего, инициализаци�
     pygame.time.set_timer(pfly_event, 1)
     door_event = 23
     pygame.time.set_timer(door_event, 1)
+    t_bridge_event = 22
+    pygame.time.set_timer(t_bridge_event, 100)
     player_group = pygame.sprite.Group()
     blue_portal_group = pygame.sprite.Group()
     yellow_portal_group = pygame.sprite.Group()
@@ -1551,13 +1652,14 @@ def reinit_groups():  # Обнуление всего, инициализаци�
     background_group = pygame.sprite.Group()
     arrow_group = pygame.sprite.Group()
     panel_group = pygame.sprite.Group()
+    bridge_group = pygame.sprite.Group()
 
 
 def load_level(): # Загрузка уровня из файла
     global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, \
         construction_group, platform_group, door_group, wire_group, button_group, \
         cube_in_level, player, cube, blue_portal, yellow_portal, cursor, background_group, \
-        arrow_group, panel_group
+        arrow_group, panel_group, bridge_group, bridge_1, bridge_2
     # Чтение файла
     file_level = open('data/save.txt', encoding='utf8')
     num_level = int(file_level.read().split()[0])
@@ -1688,7 +1790,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
         platform_group, door_group, wire_group, button_group, player, cube, blue_portal, yellow_portal, cursor, \
         speed_vertical, speed_horizontal, speed_vertical_cube, speed_horizontal_cube, speed_ver_rez, speed_hor_rez, \
         speed_ver_rez_cube, speed_hor_rez_cube, player_left_cube, player_right_cube, background_group, arrow_group, \
-        panel_group
+        panel_group, bridge_group, bridge_1, bridge_2
     # декоративные элементы окна
     pygame.display.set_caption('Portal 2D')
     pygame.display.set_icon(pygame.image.load('data/icon.gif'))
@@ -1696,6 +1798,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
     blue_portal = Portal('blue')
     yellow_portal = Portal('yellow')
     WIDTH_SCREEN = size[0]
+    HEIGHT_SCREEN = size[1]
     running = True
     speed_vertical = speed_horizontal = 0
     speed_vertical_cube = 1
@@ -1772,6 +1875,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                     cube.position = True
                     speed_vertical_cube = 1
                     player_left_cube = player_right_cube = 0
+            # Взаимодействие персонажа с воздушной панелью
             if pygame.sprite.spritecollideany(player, panel_group):
                 panel = pygame.sprite.spritecollide(player, panel_group, False)[0]
                 if player.rect.y + HEIGHT_CHELL - 15 <= panel.rect.y + HEIGHT_PANEL and \
@@ -1781,6 +1885,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                     player.rect.y = panel.rect.y - HEIGHT_CHELL
                     speed_horizontal = panel.x_speed
                     speed_vertical = panel.y_speed
+            # Взаимодействие куба с воздушной панелью
             if pygame.sprite.spritecollideany(cube, panel_group):
                 panel = pygame.sprite.spritecollide(cube, panel_group, False)[0]
                 if cube.rect.y + HEIGHT_CUBE - 5 <= panel.rect.y + HEIGHT_PANEL and \
@@ -1788,6 +1893,24 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                     cube.rect.y = panel.rect.y - HEIGHT_CUBE
                     speed_horizontal_cube = panel.x_speed
                     speed_vertical_cube = panel.y_speed
+            # Телепортирование моста
+            if event.type == t_bridge_event:
+                if pygame.sprite.spritecollideany(bridge_1, blue_portal_group) and blue_portal.opened \
+                        and yellow_portal.opened:
+                    bridge_2.teleport(yellow_portal, WIDTH_SCREEN, HEIGHT_SCREEN)
+                elif pygame.sprite.spritecollideany(bridge_1, yellow_portal_group) and blue_portal.opened \
+                        and yellow_portal.opened:
+                    bridge_2.teleport(blue_portal, WIDTH_SCREEN, HEIGHT_SCREEN)
+                else:
+                    if bridge_1.course == 1:
+                        bridge_2.image = load_image('light bridge hor.png')
+                        bridge_2.image = pygame.transform.scale(bridge_2.image, (20, HEIGHT_BRIDGE))
+                    elif bridge_1.course == 2:
+                        bridge_2.image = load_image('light bridge ver.png')
+                        bridge_2.image = pygame.transform.scale(bridge_2.image, (HEIGHT_BRIDGE, 20))
+                    bridge_2.rect = bridge_2.image.get_rect()
+                    bridge_2.rect.x = bridge_1.rect.x
+                    bridge_2.rect.y = bridge_1.rect.y
             if event.type == walking_event and pygame.key.get_pressed()[97]:
                 # движение влево с учетом взаимодействий
                 pygame.mixer.Sound.play(go_sound)
@@ -2134,19 +2257,23 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                 else:
                     player.normal(True)
             # запуск метода полёта порталов
-            if not pygame.sprite.spritecollideany(blue_portal, construction_group) and \
+            if (not pygame.sprite.spritecollideany(blue_portal, construction_group) or
+                pygame.sprite.spritecollide(blue_portal, construction_group, False)[0].color == 'no') and \
                     event.type == pfly_event and blue_portal.active and not blue_portal.opened:
                 blue_portal.portal_fly()
-            if not pygame.sprite.spritecollideany(yellow_portal, construction_group) and \
+            if (not pygame.sprite.spritecollideany(yellow_portal, construction_group) or
+                pygame.sprite.spritecollide(yellow_portal, construction_group, False)[0].color == 'no') and \
                     event.type == pfly_event and yellow_portal.active and not yellow_portal.opened:
                 yellow_portal.portal_fly()
             # запуск метода открытия порталов
             if pygame.sprite.spritecollideany(blue_portal, construction_group) and \
                     not blue_portal.opened and blue_portal.active:
-                blue_portal.portal_open()
+                if pygame.sprite.spritecollide(blue_portal, construction_group, False)[0].color != 'no':
+                    blue_portal.portal_open()
             if pygame.sprite.spritecollideany(yellow_portal, construction_group) and not \
                     yellow_portal.opened and yellow_portal.active:
-                yellow_portal.portal_open()
+                if pygame.sprite.spritecollide(yellow_portal, construction_group, False)[0].color != 'no':
+                    yellow_portal.portal_open()
             # начальная проверка прохождения через портал для куба, пресонажа и персонажа, держащего куб
             if blue_portal.active and yellow_portal.active and blue_portal.opened and \
                     yellow_portal.opened:
@@ -2190,6 +2317,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
         wire_group.draw(screen)
         button_group.draw(screen)
         arrow_group.draw(screen)
+        bridge_group.draw(screen)
         if blue_portal.active:
             blue_portal_group.draw(screen)
         if yellow_portal.active:
