@@ -31,6 +31,7 @@ door_event = 23
 t_bridge_event = 22
 pygame.time.set_timer(t_bridge_event, 100)
 cube_in_level = True
+bridge_in_level = True
 pygame.time.set_timer(door_event, 1)
 player_group = pygame.sprite.Group()
 blue_portal_group = pygame.sprite.Group()
@@ -593,6 +594,8 @@ class Platform(pygame.sprite.Sprite):
             super().__init__(all_sprites, construction_group, platform_group, bridge_group)
             color = 'no'
             self.course = course
+            if not bridge_in_level:
+                x, y, w, h = -100, -100, 1, 1
             if course == 1:
                 self.w = w
                 self.h = HEIGHT_BRIDGE
@@ -1732,7 +1735,7 @@ def reinit_groups():  # Обнуление всего, инициализаци�
     global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, construction_group, \
         platform_group, door_group, wire_group, button_group, background_group, cube_group, player_group, \
         cursor_group, cube_in_level, blue_portal_group, yellow_portal_group, pause_group, arrow_group, \
-        panel_group, bridge_group
+        panel_group, bridge_group, bridge_in_level
     walking_event = 25
     pygame.time.set_timer(walking_event, 100)
     svobod_pad_event = 24
@@ -1770,7 +1773,7 @@ def load_level(filename='data/save.txt'): # Загрузка уровня из �
     global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, \
         construction_group, platform_group, door_group, wire_group, button_group, \
         cube_in_level, player, cube, blue_portal, yellow_portal, cursor, background_group, \
-        arrow_group, panel_group, bridge_group, bridge_1, bridge_2, pause_group, num_level
+        arrow_group, panel_group, bridge_group, bridge_1, bridge_2, pause_group, num_level, bridge_in_level
     # Чтение файла
     file_level = open(filename, encoding='utf8')
     if filename != 'data/save.txt':
@@ -1929,6 +1932,10 @@ def load_level(filename='data/save.txt'): # Загрузка уровня из �
             yellow_portal.active, yellow_portal.opened, yellow_portal.position, \
             yellow_portal.rect.x, yellow_portal.rect.y = y_p[0], y_p[1], y_p[2], y_p[3], y_p[4]
             yellow_portal.portal_open()
+
+    bridge_in_level = False
+    bridge_1 = Platform(0, 0, 0, 0, 'no', [], [], [], [], 'bridge')
+    bridge_2 = Platform(0, 0, 0, 0, 'no', [], [], [], [], 'bridge')
 
     # Запуск главного цикла
     return game_cycle(screen, size, num_level, floor, wall_left, wall_right)
@@ -2470,7 +2477,8 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
         wire_group.draw(screen)
         button_group.draw(screen)
         arrow_group.draw(screen)
-        bridge_group.draw(screen)
+        if bridge_in_level:
+            bridge_group.draw(screen)
         if blue_portal.active:
             blue_portal_group.draw(screen)
         if yellow_portal.active:
