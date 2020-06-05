@@ -1,5 +1,6 @@
 import pygame
 import os
+import datetime
 
 pygame.init()
 # Объявление констант и некоторых переменных
@@ -1155,7 +1156,7 @@ class Button(pygame.sprite.Sprite):
         self.thing_arg = thing_arg
         self.main_button = main_button
         self.door_sound = pygame.mixer.Sound('data/open_door_sound.wav')
-        self.door_sound.set_volume(0.4)
+        self.door_sound.set_volume(0.15)
         self.button_sound = pygame.mixer.Sound('data/click_sound.wav')
         self.button_sound.set_volume(0.4)
         self.color = 'black'
@@ -1369,6 +1370,7 @@ class Portal(pygame.sprite.Sprite):
         self.color = color
         self.add_frames()
         self.rect = self.image.get_rect()
+        self.last_x, self.last_y = 0, 0
         self.position = 0
         self.active = False
         self.opened = False
@@ -1446,6 +1448,7 @@ class Portal(pygame.sprite.Sprite):
 
     def portal_open(self):
         # начальное открытие портала, выяснение положения и запуск проверок положения
+        self.last_x, self.last_y = self.rect.x, self.rect.y
         pygame.mixer.Sound.play(self.sound_portal_open)
         construction_list = pygame.sprite.spritecollide(self, construction_group, False)
         self.construction = construction_list[0]
@@ -1619,10 +1622,117 @@ class Portal(pygame.sprite.Sprite):
             self.portal_adjustment_floor_ceiling('f', self.image_list[1])
 
 
+def draw_text(screen, message, size_font, x, y, flag=False):  # Функция рисования текста
+    font = pygame.font.SysFont("arial", size_font)
+    text = font.render(message, 1, (255, 255, 255))
+    text_w = text.get_width()
+    text_h = text.get_height()
+    if flag:
+        screen.blit(text, (x + 200 - text_w // 2, y + 20 - text_h // 2))
+    else:
+        screen.blit(text, (x, y))
+
+
+class FunctionalButton:  # Класс кнопки из меню паузы
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+
+    def draw(self, x, y, text, screen, action=None):
+        mouse = pygame.mouse.get_pos()
+        click = pygame.mouse.get_pressed()
+
+        if x < mouse[0] < x + self.width and y < mouse[1] < y + self.height:
+            pygame.draw.rect(screen, (224, 232, 246), (x, y, self.width, self.height))
+
+            if click[0] == 1 and action is not None:
+                pygame.time.delay(100)
+                action()
+        else:
+            pygame.draw.rect(screen, (139, 210, 238), (x, y, self.width, self.height))
+        draw_text(screen, text, 35, x, y, True)
+
+
+def draw_pause_menu(screen, functional_buttons, WIDTH_SCREEN, HEIGHT_SCREEN):  # Меню паузы
+    cord_x, cord_y = WIDTH_SCREEN // 2 - 500, HEIGHT_SCREEN // 2 - 300
+
+    pause_group.draw(screen)
+    draw_text(screen, "PORTAL 2D", 60, cord_x + 500, cord_y + 50)
+    text_btn = ["Продолжить", "Перезапустить", "Сохранить", "Загрузить", "Меню"]
+    func_btn = [continue_game, reload_level, save_game, load_game, back_to_menu]
+    for i in range(len(functional_buttons)):
+        functional_buttons[i].draw(cord_x + 50, cord_y + 150 + i * 70, text_btn[i], screen, func_btn[i])
+
+
+def continue_game():  # Продолжение игры
+    global pause_flag
+    pause_flag = False
+
+
+def back_to_menu():  # Возвращение в главное меню
+    global running
+    running = False
+
+
+def save_game():  # Сохранение игры
+    global player, cube, num_level, yellow_portal, blue_portal, now_screen
+    # Название файла сохранения
+    date = str(datetime.datetime.now()).split('.')[0]
+    filename = "data/saves/" + date + ".txt"
+    filename = filename.replace(':', '_')
+
+    # Название файла изображения
+    imagename = "data/saves/images/" + date + ".png"
+    imagename = imagename.replace(':', '_')
+
+    # Запись текущего состояния в файл сохранения
+    file = open(filename, "w")
+    file.write(str(num_level) + "\n")
+    file.write(str(player.rect.left) + " " + str(player.rect.top - 5) + "\n")
+    file.write(str(cube.rect.left) + " " + str(cube.rect.top - 5) + "\n")
+    file.write(str(int(yellow_portal.active)) + " " + str(int(yellow_portal.opened)) + " " +
+               str(yellow_portal.position) + " " +
+               str(yellow_portal.last_x) + " " + str(yellow_portal.last_y) + "\n")
+    file.write(str(int(blue_portal.active)) + " " + str(int(blue_portal.opened)) + " " +
+               str(blue_portal.position) + " " +
+               str(blue_portal.last_x) + " " + str(blue_portal.last_y))
+    file.close()
+
+    # Обновление последнего сохранения
+    file_last_save = open('data/saves/last_save.txt', "w")
+    file_last_save.write(filename)
+    file_last_save.close()
+
+    # Сохранения текущего состояния в виде изображения
+    try:
+        pygame.image.save(now_screen, imagename)
+    except Exception as error:
+        print(error)
+
+
+def load_game():  # Загрузка последнего сохранения
+    global win_flag, running
+    file_level = open('data/save.txt', encoding='utf8')
+    data = file_level.read().split()
+    try:
+        name_last_save = open('data/saves/last_save.txt').readlines()[0]
+    except Exception:
+        return
+    win_flag = 2
+    running = False
+
+
+def reload_level():  # Перезагрузка текущего уровня
+    global win_flag, running
+    win_flag = 3
+    running = False
+
+
 def reinit_groups():  # Обнуление всего, инициализация групп
     global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, construction_group, \
         platform_group, door_group, wire_group, button_group, background_group, cube_group, player_group, \
-        cursor_group, cube_in_level, blue_portal_group, yellow_portal_group, arrow_group, panel_group, bridge_group
+        cursor_group, cube_in_level, blue_portal_group, yellow_portal_group, pause_group, arrow_group, \
+        panel_group, bridge_group
     walking_event = 25
     pygame.time.set_timer(walking_event, 100)
     svobod_pad_event = 24
@@ -1653,16 +1763,21 @@ def reinit_groups():  # Обнуление всего, инициализаци�
     arrow_group = pygame.sprite.Group()
     panel_group = pygame.sprite.Group()
     bridge_group = pygame.sprite.Group()
+    pause_group = pygame.sprite.Group()
 
 
-def load_level(): # Загрузка уровня из файла
+def load_level(filename='data/save.txt'): # Загрузка уровня из файла
     global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, \
         construction_group, platform_group, door_group, wire_group, button_group, \
         cube_in_level, player, cube, blue_portal, yellow_portal, cursor, background_group, \
-        arrow_group, panel_group, bridge_group, bridge_1, bridge_2
+        arrow_group, panel_group, bridge_group, bridge_1, bridge_2, pause_group, num_level
     # Чтение файла
-    file_level = open('data/save.txt', encoding='utf8')
-    num_level = int(file_level.read().split()[0])
+    file_level = open(filename, encoding='utf8')
+    if filename != 'data/save.txt':
+        dop = file_level.readlines()
+        num_level = int(dop[0])
+    else:
+        num_level = int(file_level.read().split()[0])
     name_file = 'data/level_{}.txt'.format(str(num_level))
     file_objects = open(name_file, encoding='utf8')
     lines = file_objects.readlines()
@@ -1680,6 +1795,15 @@ def load_level(): # Загрузка уровня из файла
     background.rect = background.image.get_rect()
     background.rect.x = 0
     background.rect.y = 0
+
+    # Загрузка окна паузы
+    pause = pygame.sprite.Sprite()
+    pause_group.add(pause)
+    pause_image = load_image("MenuWindow_background.jpg")
+    pause.image = pygame.transform.scale(pause_image, (1000, 600))
+    pause.rect = pause.image.get_rect()
+    pause.rect.x = width // 2 - 500
+    pause.rect.y = height // 2 - 300
 
     # Загрузка стен, потолка и пола
     for k in range(4):
@@ -1733,53 +1857,78 @@ def load_level(): # Загрузка уровня из файла
                  int(lines[k + 6][3]), lines[k + 6][4], interval[0],
                  interval[1], interval[2], interval[3])
 
-    # Дозагрузка всего остального
-    if num_level == 1:
-        cube_in_level = False
-        player = Player(20, 430)
-        cube = Cube(0, 0)
-    elif num_level == 2:
-        cube_in_level = True
-        door_1 = Platform(706, height - 120, 0, 0, '',
-                          [(0, 0)], [(0, 0)], [(0, 0)], [(0, 0)], 'door', 1)
-        button_1 = Button(400, height - 50, door_1,
-                          [Wire(425, 869, 'hor'),
-                           Wire(525, 869, 'hor'),
-                           Wire(625, 869, 'hor')], 0, True)
-        door_2 = Platform(160, 340, 0, 0, '',
-                          [(0, 0)], [(0, 0)], [(0, 0)], [(0, 0)], 'door', 2)
-        button_2 = Button(width - 750, 410, door_2,
-                          [Wire(width - 720, 418, 'hor'), Wire(width - 680, 378, 'ver'),
-                           Wire(width - 680, 278, 'ver'), Wire(width - 680, 178, 'ver'),
-                           Wire(width - 720, 138, 'hor'), Wire(width - 720, 138, 'hor'),
-                           Wire(width - 820, 138, 'hor'), Wire(width - 920, 138, 'hor'),
-                           Wire(width - 1020, 138, 'hor'), Wire(width - 1120, 138, 'hor'),
-                           Wire(width - 1220, 138, 'hor'), Wire(width - 1320, 138, 'hor'),
-                           Wire(width - 1378, 178, 'ver'), Wire(width - 1378, 240, 'ver')], 0, True)
-        button_3 = Button(400, 610, door_2,
-                          [Wire(340, 617, 'hor'), Wire(240, 617, 'hor'),
-                           Wire(140, 617, 'hor'), Wire(40, 617, 'hor'),
-                           Wire(-20, 577, 'ver'), Wire(-20, 479, 'ver'),
-                           Wire(-20, 440, 'ver'), Wire(40, 400, 'hor'),
-                           Wire(80, 400, 'hor')], 1, True)
-        player = Player(20, 800)
-        cube = Cube(270, 800)
-    elif num_level == 3:
-        cube_in_level = False
-        player = Player(150, 870)
-        cube = Cube(0, 0)
-    elif num_level == 4:
-        cube_in_level = True
-        hameleon = Platform(550, 20, 40, 560, '', [(20, 580)],
-                            [(0, 0)], [(0, 0)], [(550, 570)], 'hameleon', 1)
-        button_wire_list = [Wire(590, -20, 'hor'), Wire(690, -20, 'hor'),
-                            Wire(790, -20, 'hor'), Wire(890, -20, 'hor'),
-                            Wire(990, -20, 'hor'), Wire(1090, -20, 'hor'),
-                            Wire(1190, -20, 'hor'), Wire(1230, 40, 'ver'),
-                            Wire(1230, 140, 'ver'), Wire(1190, 180, 'hor')]
-        button = Button(1155, 188, hameleon, button_wire_list, 0)
-        cube = Cube(21, 320)
-        player = Player(150, 670)
+    # Загрузка персонажа
+    last_str = cnt_platforms + 6
+    if filename != "data/save.txt":
+        player = Player(int(dop[1].split()[0]), int(dop[1].split()[1]))
+    else:
+        player = Player(int(lines[last_str][0]), int(lines[last_str][1]))
+
+    # Загрузка куба
+    cube_in_level = bool(int(int(lines[last_str + 1][0])))
+    if filename != "data/save.txt":
+        cube = Cube(int(dop[2].split()[0]), int(dop[2].split()[1]))
+    else:
+        cube = Cube(int(lines[last_str + 2][0]), int(lines[last_str + 2][1]))
+
+    obj_for_buttons = []
+
+    # Загрузка дверей
+    last_str += 3
+    cnt_doors = int(lines[last_str][0])
+    last_str += 1
+    for k in range(cnt_doors):
+        door = Platform(int(lines[last_str + k][0]), int(lines[last_str + k][1]), int(lines[last_str + k][2]),
+                        int(lines[last_str + k][3]), '', [(0, 0)], [(0, 0)],
+                        [(0, 0)], [(0, 0)], lines[last_str + k][4], int(lines[last_str + k][5]))
+        obj_for_buttons.append(door)
+
+    # Загрузка стен-хамелеонов
+    last_str += cnt_doors
+    cnt_hameleons = int(lines[last_str][0])
+    last_str += 1
+    for k in range(cnt_hameleons):
+        hameleon = Platform(int(lines[last_str + k][0]), int(lines[last_str + k][1]), int(lines[last_str + k][2]),
+                            int(lines[last_str + k][3]), '',
+                            [(int(lines[last_str + k][4]), int(lines[last_str + k][5]))],
+                            [(int(lines[last_str + k][6]), int(lines[last_str + k][7]))],
+                            [(int(lines[last_str + k][8]), int(lines[last_str + k][9]))],
+                            [(int(lines[last_str + k][10]), int(lines[last_str + k][11]))],
+                            lines[last_str + k][12], int(lines[last_str + k][13]))
+        obj_for_buttons.append(hameleon)
+
+    # Загрузка кнопок
+    last_str += cnt_hameleons
+    cnt_buttons = int(lines[last_str][0])
+    last_str += 1
+    for k in range(cnt_buttons):
+        button_wire_list = []
+        now_j = 4
+        for i in range(int(lines[last_str + k][3])):
+            button_wire_list.append(Wire(int(lines[last_str + k][now_j]),
+                                         int(lines[last_str + k][now_j + 1]),
+                                         lines[last_str + k][now_j + 2]))
+            now_j += 3
+        button = Button(int(lines[last_str + k][0]), int(lines[last_str + k][1]),
+                        obj_for_buttons[int(lines[last_str + k][2])], button_wire_list,
+                        int(lines[last_str + k][now_j]), bool(int(lines[last_str + k][now_j + 1])))
+
+    # Инициализация порталов
+    blue_portal = Portal('blue')
+    yellow_portal = Portal('yellow')
+    if filename != "data/save.txt":
+        y_p = list(map(int, dop[3].split()))
+        b_p = list(map(int, dop[4].split()))
+
+        if b_p[0] and b_p[1]:
+            blue_portal.active, blue_portal.opened, blue_portal.position, \
+            blue_portal.rect.x, blue_portal.rect.y = b_p[0], b_p[1], b_p[2], b_p[3], b_p[4]
+            blue_portal.portal_open()
+
+        if y_p[0] and y_p[1]:
+            yellow_portal.active, yellow_portal.opened, yellow_portal.position, \
+            yellow_portal.rect.x, yellow_portal.rect.y = y_p[0], y_p[1], y_p[2], y_p[3], y_p[4]
+            yellow_portal.portal_open()
 
     # Запуск главного цикла
     return game_cycle(screen, size, num_level, floor, wall_left, wall_right)
@@ -1790,13 +1939,11 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
         platform_group, door_group, wire_group, button_group, player, cube, blue_portal, yellow_portal, cursor, \
         speed_vertical, speed_horizontal, speed_vertical_cube, speed_horizontal_cube, speed_ver_rez, speed_hor_rez, \
         speed_ver_rez_cube, speed_hor_rez_cube, player_left_cube, player_right_cube, background_group, arrow_group, \
-        panel_group, bridge_group, bridge_1, bridge_2
+        panel_group, bridge_group, bridge_1, bridge_2, pause_group, pause_flag, running, win_flag, now_screen
     # декоративные элементы окна
     pygame.display.set_caption('Portal 2D')
     pygame.display.set_icon(pygame.image.load('data/icon.gif'))
     # объявление некоторых переменных
-    blue_portal = Portal('blue')
-    yellow_portal = Portal('yellow')
     WIDTH_SCREEN = size[0]
     HEIGHT_SCREEN = size[1]
     running = True
@@ -1819,15 +1966,21 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
     go_sound = pygame.mixer.Sound('data/go_sound.wav')
     go_sound.set_volume(0.05)
     groups = [platform_group, button_group, cube_group]
-    win_flag = False
+    win_flag = 0
+    pause_flag = False
+    functional_buttons = [FunctionalButton(400, 40)] * 5
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                pause_flag = not pause_flag
             if event.type == pygame.MOUSEMOTION:
                 # курсор находится не в левом углу изображения, а в середине
                 cursor.rect.left = event.pos[0] - 25
                 cursor.rect.top = event.pos[1] - 25
+            if pause_flag:
+                continue
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     # запуск синего портала
@@ -2307,7 +2460,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                 speed_vertical_cube = 75
         # выход из цикла при проходе через дверь
         if player.rect.x + WIDTH_CHELL < 25 or player.rect.x > WIDTH_SCREEN - 25:
-            win_flag = True
+            win_flag = 1
             running = False
         screen.fill(pygame.Color("orange"))
         # прорисовка спрайтов
@@ -2325,6 +2478,15 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
         if cube_in_level:
             cube_group.draw(screen)
         player_group.draw(screen)
+
+        # Текущий экран для возможного сохранения
+        now_screen = pygame.Surface((WIDTH_SCREEN, HEIGHT_SCREEN))
+        now_screen.blit(screen, (0, 0), (0, 0, WIDTH_SCREEN, HEIGHT_SCREEN))
+
+        # Меню паузы
+        if pause_flag:
+            draw_pause_menu(screen, functional_buttons, WIDTH_SCREEN, HEIGHT_SCREEN)
+
         if pygame.mouse.get_focused():
             cursor_group.draw(screen)
         pygame.display.flip()
