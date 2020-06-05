@@ -43,6 +43,11 @@ def load_image(name, colorkey=None):  # Загрузка изображения
     return image
 
 
+def death():
+    reinit_groups()
+    load_level()
+
+
 def chell_pass_to_portal(self, color):
     # функция конечной проверки прохождения персонажа через портал
     global speed_horizontal
@@ -1507,12 +1512,10 @@ class Bullet(pygame.sprite.Sprite):
         self.w = 9
         self.h = 9
         self.k = self.y / self.x
-        x = round(((20 ** 2) / (1 + self.k * self.k)) ** 0.5)
+        x = round(((speed_bullet ** 2) / (1 + self.k * self.k)) ** 0.5)
         if self.napr == "left":
             x = -x
         y = round(x * self.k)
-        self.xplus = x
-        self.ypus = y
         self.xplus = x
         self.yplus = y
         self.active = True
@@ -1547,10 +1550,8 @@ def reinit_groups():  # Обнуление всего, инициализаци�
     pygame.time.set_timer(pfly_event, 1)
     door_event = 23
     pygame.time.set_timer(door_event, 1)
-    bullet_event = 22
-    pygame.time.set_timer(bullet_event, 500)
     bullet_move_event = 20
-    pygame.time.set_timer(bullet_move_event, 1)
+    pygame.time.set_timer(bullet_move_event, 2)
     player_group = pygame.sprite.Group()
     turret_group = pygame.sprite.Group()
     blue_portal_group = pygame.sprite.Group()
@@ -1598,7 +1599,7 @@ def load_level(): # Загрузка уровня из файла
         wall_right = WallFloorCelling(WIDTH_SCREEN - 20, 0, 20, HEIGHT_SCREEN, 'grey', 'wr', [(20, HEIGHT_SCREEN)])
         Platform(0, 600, 160, 50, 'grey', [(0, 0)], [(0, 160)], [(0, 0)], [(0, 160)])
         Platform(360, 600, 180, 200, 'grey', [(600, 770)], [(360, 540)], [(600, 770)], [(360, 540)])
-        Turret(40, 710, 'right')
+        Turret(700, 710, 'left')
         floor = WallFloorCelling(0, 800 - 20, 800, 20, 'grey', 'f', [(20, 680)])
         floor_group.add(floor)
         wall_left_group.add(wall_left)
@@ -1753,6 +1754,12 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
     running = True
     speed_vertical = speed_horizontal = 0
     speed_bullet = 10
+    count = 0
+    number = 10000
+    if len(turret_group) != 0:
+        number = 800 // len(turret_group)
+    bullet_event = 22
+    pygame.time.set_timer(bullet_event, number)
     speed_vertical_cube = 1
     speed_horizontal_cube = 0
     speed_ver_rez = speed_hor_rez = 0
@@ -2178,18 +2185,30 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                         turret.death()
                         turret.life = False
             if event.type == bullet_event:
-                for turret in turret_group:
-                    if turret.life:
-                        x1 = player.rect.left + WIDTH_CHELL // 2
-                        y1 = player.rect.top + HEIGHT_CHELL // 2
-                        x2 = turret.rect.left + turret.w // 2
-                        y2 = turret.rect.top + turret.h // 2
-                        if turret.napr == "right" and player.rect.left + WIDTH_CHELL // 2 > turret.rect.left or \
-                                turret.napr == "left" and player.rect.left - WIDTH_CHELL // 2 < turret.rect.left:
-                            if turret.napr == 'right':
-                                bullet = Bullet(x1, y1, x2, y2, 'right')
-                            else:
-                                bullet = Bullet(x1, y1, x2, y2, 'left')
+                dop_count = 0
+                if len(turret_group) != 0:
+                    count %= len(turret_group)
+                    for turret in turret_group:
+                        if dop_count == count:
+                            count += 1
+                            break
+                        dop_count += 1
+                if len(turret_group) != 0 and turret.life:
+                    x1 = player.rect.left + WIDTH_CHELL // 2
+                    y1 = player.rect.top + HEIGHT_CHELL // 2
+                    if turret.napr == 'right':
+                        x2 = turret.rect.left + 55
+                        y2 = turret.rect.top + 30
+                    else:
+                        x2 = turret.rect.left + 15
+                        y2 = turret.rect.top + 30
+                    if turret.napr == "right" and player.rect.left + WIDTH_CHELL // 2 > \
+                            turret.rect.left + turret.w // 2 or turret.napr == "left" and\
+                            player.rect.left + WIDTH_CHELL // 2 < turret.rect.left + turret.w // 2:
+                        if turret.napr == 'right':
+                            Bullet(x1, y1, x2, y2, 'right')
+                        else:
+                            Bullet(x1, y1, x2, y2, 'left')
             if event.type == bullet_move_event:
                 for bullet in bullet_group:
                     if bullet.active and bullet.visible:
@@ -2208,7 +2227,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                             bullet.visible_func()
                             bullet.rect.left = bullet.x2
                             bullet.rect.top = bullet.y2
-                        if pygame.sprite.spritecollideany(bullet, construction_group) and not \
+                        elif pygame.sprite.spritecollideany(bullet, construction_group) and not \
                                 pygame.sprite.spritecollideany(bullet, cube_group) and not \
                                 pygame.sprite.spritecollideany(bullet, turret_group):
                             bullet.kill()
