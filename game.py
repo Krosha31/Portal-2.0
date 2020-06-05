@@ -604,9 +604,9 @@ class Platform(pygame.sprite.Sprite):
             super().__init__(all_sprites, construction_group, platform_group)
             color = 'black'
             self.image = load_image('black.png')
-            self.w = w
-            self.h = h
-        elif p_type == 'bridge':
+        self.w = w
+        self.h = h
+        if p_type == 'bridge':
             super().__init__(all_sprites, construction_group, platform_group, bridge_group)
             color = 'no'
             self.course = course
@@ -1661,7 +1661,6 @@ class Turret(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.rect = self.rect.move(x, y)
-
 
     def death(self):
         global speed_vertical, speed_horizontal
