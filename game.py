@@ -1,5 +1,6 @@
 import pygame
 import os
+import datetime
 
 pygame.init()
 # Объявление констант и некоторых переменных
@@ -9,6 +10,15 @@ HEIGHT_PORTAL = 100
 WIDTH_PORTAL = 20
 WIDTH_WIRE = HEIGHT_WIRE = 100
 HEIGHT_SPHERE = WIDTH_SPHERE = 16
+WIDTH_BLUE_ARROW = 45
+HEIGHT_BLUE_ARROW = 70
+WIDTH_RED_ARROW = 80
+HEIGHT_RED_ARROW = 53
+WIDTH_DOOR = 20
+HEIGHT_DOOR = 100
+WIDTH_PANEL = 100
+HEIGHT_PANEL = 20
+HEIGHT_BRIDGE = 20
 STEP = 20
 speed_vertical = speed_horizontal = 0
 ZERO_SPEED = 5
@@ -19,9 +29,12 @@ pygame.time.set_timer(svobod_pad_event, 25)
 pfly_event = 26
 pygame.time.set_timer(pfly_event, 25)
 door_event = 23
+t_bridge_event = 22
+pygame.time.set_timer(t_bridge_event, 100)
 cube_in_level = True
 speed_bullet = 10
 pygame.time.set_timer(door_event, 100)
+bridge_in_level = True
 player_group = pygame.sprite.Group()
 blue_portal_group = pygame.sprite.Group()
 yellow_portal_group = pygame.sprite.Group()
@@ -104,8 +117,8 @@ def cube_pass_to_portal(self, color):
     global speed_horizontal_cube
     if color == 'blue':
         if blue_portal.position == 1 or blue_portal.position == 3:
-            if blue_portal.rect.y <= self.rect.y <= blue_portal.rect.y + HEIGHT_PORTAL and \
-                    blue_portal.rect.y <= self.rect.y + HEIGHT_CUBE <= blue_portal.rect.y \
+            if blue_portal.rect.y <= self.rect.y + 5 <= blue_portal.rect.y + HEIGHT_PORTAL and \
+                    blue_portal.rect.y <= self.rect.y + HEIGHT_CUBE - 5 <= blue_portal.rect.y \
                     + HEIGHT_PORTAL:
                 if (blue_portal.position == 1 and self.rect.x + WIDTH_CUBE >= blue_portal.rect.x
                     and (speed_horizontal_cube > 0 or not cube.position)) or \
@@ -123,8 +136,8 @@ def cube_pass_to_portal(self, color):
                     return True
     elif color == 'yellow':
         if yellow_portal.position == 1 or yellow_portal.position == 3:
-            if yellow_portal.rect.y <= self.rect.y <= yellow_portal.rect.y + HEIGHT_PORTAL and \
-                    yellow_portal.rect.y <= self.rect.y + HEIGHT_CUBE <= \
+            if yellow_portal.rect.y <= self.rect.y + 5 <= yellow_portal.rect.y + HEIGHT_PORTAL and \
+                    yellow_portal.rect.y <= self.rect.y + HEIGHT_CUBE - 5 <= \
                     yellow_portal.rect.y + HEIGHT_PORTAL:
                 if (yellow_portal.position == 1 and
                     self.rect.x + WIDTH_CUBE >= yellow_portal.rect.x
@@ -494,6 +507,20 @@ class Player(pygame.sprite.Sprite):  # класс персонажа
             return False
 
 
+class Arrow(pygame.sprite.Sprite):  # Класс стрелочек
+    def __init__(self, x, y, color, course='r'):  # Загрузка изображений стрелочек
+        super().__init__(arrow_group)
+        if color == 'blue':
+            image = load_image('blue_arrow.gif')
+            image = pygame.transform.scale(image, (WIDTH_BLUE_ARROW, HEIGHT_BLUE_ARROW))
+        elif color == 'red':
+            image = load_image('red_arrow_{}.gif'.format(course))
+            image = pygame.transform.scale(image, (WIDTH_RED_ARROW, HEIGHT_RED_ARROW))
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect = self.rect.move(x, y)
+
+
 class Wire(pygame.sprite.Sprite):  # класс проводов
     def __init__(self, x, y, pos):  # загрузка изображений проводов
         super().__init__(wire_group)
@@ -542,11 +569,23 @@ class WallFloorCelling(pygame.sprite.Sprite):  # класс стен, потол
         self.rect = self.rect.move(x, y)
 
 
+class AirPanel(pygame.sprite.Sprite):  # Класс воздушных панелей
+    def __init__(self, x, y, x_speed, y_speed):  # Загрузка изображения воздушной панели
+        super().__init__(all_sprites, construction_group, panel_group)
+        self.color = 'black'
+        self.x_speed = x_speed
+        self.y_speed = -y_speed
+        self.image = load_image('air panel.gif')
+        self.image = pygame.transform.scale(self.image, (WIDTH_PANEL, HEIGHT_PANEL))
+        self.rect = self.image.get_rect()
+        self.rect = self.rect.move(x, y)
+
+
 class Platform(pygame.sprite.Sprite):
     # класс платформ, который включает в себя еще и двери
     # загрузка изображений платформ или двери
     def __init__(self, x, y, w, h, color, int_sp_1, int_sp_2, int_sp_3,
-                 int_sp_4, p_type='n', act_list_l=0, speed_k=1):
+                 int_sp_4, p_type='n', act_list_l=0, speed_k=1, course=1):
         if p_type == 'n':
             super().__init__(all_sprites, construction_group, platform_group)
             if color == 'grey':
@@ -556,8 +595,8 @@ class Platform(pygame.sprite.Sprite):
         elif p_type == 'door':
             super().__init__(construction_group, platform_group, door_group)
             color = 'black'
-            w = 19
-            h = 100
+            w = WIDTH_DOOR
+            h = HEIGHT_DOOR
             self.image = load_image('door.gif')
             self.y = y
             self.speed = 1
@@ -565,8 +604,22 @@ class Platform(pygame.sprite.Sprite):
             super().__init__(all_sprites, construction_group, platform_group)
             color = 'black'
             self.image = load_image('black.png')
-        self.w = w
-        self.h = h
+            self.w = w
+            self.h = h
+        elif p_type == 'bridge':
+            super().__init__(all_sprites, construction_group, platform_group, bridge_group)
+            color = 'no'
+            self.course = course
+            if not bridge_in_level:
+                x, y, w, h = -100, -100, 1, 1
+            if course == 1:
+                self.w = w
+                self.h = HEIGHT_BRIDGE
+                self.image = load_image('light bridge hor.png')
+            elif course == 2:
+                self.w = HEIGHT_BRIDGE
+                self.h = w
+                self.image = load_image('light bridge ver.png')
         self.activated_list = [False] * act_list_l
         self.activated_list_len = act_list_l
         self.p_type = p_type
@@ -767,18 +820,95 @@ class Platform(pygame.sprite.Sprite):
                 yellow_portal.active = False
                 yellow_portal.opened = False
 
+    def teleport(self, portal, WIDTH_SCREEN, HEIGHT_SCREEN):
+        if portal.position == 1:
+            self.image = load_image('light bridge hor.png')
+            self.image = pygame.transform.scale(self.image, (portal.rect.x, HEIGHT_BRIDGE))
+            self.rect = self.image.get_rect()
+            self.rect.x = 0
+            self.rect.y = portal.rect.y + HEIGHT_PORTAL - HEIGHT_BRIDGE
+            self_list = pygame.sprite.spritecollide(self, construction_group, False)
+            max_x = 0
+            for thing in self_list:
+                if thing.color != 'no':
+                    if thing.rect.x + thing.rect.width > max_x:
+                        max_x = thing.rect.x + thing.rect.width
+            self.image = pygame.transform.scale(self.image, (portal.rect.x - max_x, HEIGHT_BRIDGE))
+            self.rect = self.image.get_rect()
+            self.rect.x = max_x
+            self.rect.y = portal.rect.y + HEIGHT_PORTAL - HEIGHT_BRIDGE
+        elif portal.position == 3:
+            self.image = load_image('light bridge hor.png')
+            self.image = pygame.transform.scale(self.image, (WIDTH_SCREEN - portal.rect.x -
+                                                                     WIDTH_PORTAL, HEIGHT_BRIDGE))
+            self.rect = self.image.get_rect()
+            self.rect.x = portal.rect.x + WIDTH_PORTAL
+            self.rect.y = portal.rect.y + HEIGHT_PORTAL - HEIGHT_BRIDGE
+            self_list = pygame.sprite.spritecollide(self, construction_group, False)
+            min_x = WIDTH_SCREEN
+            for thing in self_list:
+                if thing.color != 'no':
+                    if thing.rect.x < min_x:
+                        min_x = thing.rect.x
+            self.image = pygame.transform.scale(self.image, (min_x - portal.rect.x - WIDTH_PORTAL, HEIGHT_BRIDGE))
+            self.rect = self.image.get_rect()
+            self.rect.x = portal.rect.x + WIDTH_PORTAL
+            self.rect.y = portal.rect.y + HEIGHT_PORTAL - HEIGHT_BRIDGE
+        elif portal.position == 2:
+            self.image = load_image('light bridge ver.png')
+            self.image = pygame.transform.scale(self.image, (HEIGHT_BRIDGE, portal.rect.y))
+            self.rect = self.image.get_rect()
+            self.rect.x = portal.rect.x + HEIGHT_PORTAL - HEIGHT_BRIDGE
+            self.rect.y = 0
+            self_list = pygame.sprite.spritecollide(self, construction_group, False)
+            max_y = 0
+            for thing in self_list:
+                if thing.color != 'no':
+                    if thing.rect.y + thing.rect.height > max_y:
+                        max_y = thing.rect.y + thing.rect.height
+            self.image = pygame.transform.scale(self.image, (HEIGHT_BRIDGE, portal.rect.y - max_y))
+            self.rect = self.image.get_rect()
+            self.rect.x = portal.rect.x + HEIGHT_PORTAL - HEIGHT_BRIDGE
+            self.rect.y = max_y
+        elif portal.position == 4:
+            self.image = load_image('light bridge ver.png')
+            self.image = pygame.transform.scale(self.image, (HEIGHT_BRIDGE, HEIGHT_SCREEN -
+                                                             portal.rect.y - WIDTH_PORTAL))
+            self.rect = self.image.get_rect()
+            self.rect.x = portal.rect.x + HEIGHT_PORTAL - HEIGHT_BRIDGE
+            self.rect.y = portal.rect.y + WIDTH_PORTAL
+            self_list = pygame.sprite.spritecollide(self, construction_group, False)
+            min_y = HEIGHT_SCREEN
+            for thing in self_list:
+                if thing.color != 'no':
+                    if thing.rect.y < min_y:
+                        min_y = thing.rect.y
+            self.image = pygame.transform.scale(self.image, (HEIGHT_BRIDGE, min_y - portal.rect.y - WIDTH_PORTAL))
+            self.rect = self.image.get_rect()
+            self.rect.x = portal.rect.x + HEIGHT_PORTAL - HEIGHT_BRIDGE
+            self.rect.y = portal.rect.y + WIDTH_PORTAL
+
 
 class Cube(pygame.sprite.Sprite):
-    # класс куба, загрузка ищображения куба
-    def __init__(self, x=0, y=0):
+    # класс куба, загрузка изображения куба в зависимости от типа
+    def __init__(self, x=0, y=0, type='n', t_x=0, t_y=0):
         super().__init__(cube_group, construction_group)
-        self.image = load_image('cube.gif')
+        if type == 'n':
+            self.image = load_image('cube 1.gif')
+        elif type == 't':
+            self.image = load_image('cube 2.gif')
         if cube_in_level:
             self.image = pygame.transform.scale(self.image, (HEIGHT_CUBE, WIDTH_CUBE))
         else:
             self.image = pygame.transform.scale(self.image, (1, 1))
+        self.activated_list = [False]
+        self.activated_list_len = 1
         self.x = x
         self.y = y
+        self.type = type
+        self.t_x = t_x
+        self.t_y = t_y
+        self.t_flag = True
         self.color = 'black'
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
@@ -870,7 +1000,7 @@ class Cube(pygame.sprite.Sprite):
                 self.teleport('blue', yellow_portal.position)
 
     def teleport(self, color, position):
-        # телепортирование куба, сохранение скоростей, двигание персонажа кубом при телепортации при необходимости
+        # телепортирование куба, сохранение скоростей, двигание куба или персонажа при необходимости
         global speed_vertical_cube, speed_horizontal_cube, speed_ver_rez_cube, speed_hor_rez_cube
         teleport_sound = pygame.mixer.Sound('data/teleport_sound.wav')
         pygame.mixer.Sound.play(teleport_sound)
@@ -939,6 +1069,14 @@ class Cube(pygame.sprite.Sprite):
                 elif position == 4:
                     speed_vertical_cube = -speed_vertical_cube
                 speed_horizontal_cube = 0
+            if blue_portal.position == 1 or blue_portal.position == 3:
+                while len(pygame.sprite.spritecollide(cube, bridge_group, False)) > 0:
+                    self.rect.y -= 1
+                self.rect.y -= 1
+            elif blue_portal.position == 2 or blue_portal.position == 4:
+                while len(pygame.sprite.spritecollide(cube, bridge_group, False)) > 0:
+                    self.rect.x -= 1
+                self.rect.x -= 1
         elif color == 'yellow':
             if yellow_portal.position == 1:
                 self.rect.x = yellow_portal.rect.x - WIDTH_CUBE - 1
@@ -996,6 +1134,14 @@ class Cube(pygame.sprite.Sprite):
                 elif position == 4:
                     speed_vertical_cube = -speed_vertical_cube
                 speed_horizontal_cube = 0
+            if yellow_portal.position == 1 or yellow_portal.position == 3:
+                while len(pygame.sprite.spritecollide(cube, bridge_group, False)) > 0:
+                    self.rect.y -= 1
+                self.rect.y -= 1
+            elif yellow_portal.position == 2 or yellow_portal.position == 4:
+                while len(pygame.sprite.spritecollide(cube, bridge_group, False)) > 0:
+                    self.rect.x -= 1
+                self.rect.x -= 1
 
     def touch_check(self, portal):
         # проверка касания кубом порталов
@@ -1008,6 +1154,15 @@ class Cube(pygame.sprite.Sprite):
         elif portal.position == 4 and portal.rect.y + WIDTH_PORTAL == self.rect.y:
             return True
         return False
+
+    def thing_on(self):  # Метод реагирования куба на нажатие кнопки
+        if self.type == 't':
+            self.rect.x = self.t_x
+            self.rect.y = self.t_y
+
+    def thing_off(self):  # Метод реагирования куба на разжатие кнопки
+        if self.type == 't':
+            pass
 
 
 class Button(pygame.sprite.Sprite):
@@ -1024,7 +1179,7 @@ class Button(pygame.sprite.Sprite):
         self.thing_arg = thing_arg
         self.main_button = main_button
         self.door_sound = pygame.mixer.Sound('data/open_door_sound.wav')
-        self.door_sound.set_volume(0.4)
+        self.door_sound.set_volume(0.15)
         self.button_sound = pygame.mixer.Sound('data/click_sound.wav')
         self.button_sound.set_volume(0.4)
         self.color = 'black'
@@ -1233,11 +1388,12 @@ class Portal(pygame.sprite.Sprite):
             super().__init__(yellow_portal_group)
             self.sound_shot = pygame.mixer.Sound('data/yellow_shot.wav')
             self.sound_portal_open = pygame.mixer.Sound('data/yellow_open.wav')
-        self.speed = 20
+        self.speed = 15
         self.image_list = []
         self.color = color
         self.add_frames()
         self.rect = self.image.get_rect()
+        self.last_x, self.last_y = 0, 0
         self.position = 0
         self.active = False
         self.opened = False
@@ -1315,6 +1471,7 @@ class Portal(pygame.sprite.Sprite):
 
     def portal_open(self):
         # начальное открытие портала, выяснение положения и запуск проверок положения
+        self.last_x, self.last_y = self.rect.x, self.rect.y
         pygame.mixer.Sound.play(self.sound_portal_open)
         construction_list = pygame.sprite.spritecollide(self, construction_group, False)
         self.construction = construction_list[0]
@@ -1537,12 +1694,119 @@ class Bullet(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.rect = self.rect.move(x2, y2)
+        
+        
+def draw_text(screen, message, size_font, x, y, flag=False):  # Функция рисования текста
+    font = pygame.font.SysFont("arial", size_font)
+    text = font.render(message, 1, (255, 255, 255))
+    text_w = text.get_width()
+    text_h = text.get_height()
+    if flag:
+        screen.blit(text, (x + 200 - text_w // 2, y + 20 - text_h // 2))
+    else:
+        screen.blit(text, (x, y))
+
+
+class FunctionalButton:  # Класс кнопки из меню паузы
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+
+    def draw(self, x, y, text, screen, action=None):
+        mouse = pygame.mouse.get_pos()
+        click = pygame.mouse.get_pressed()
+
+        if x < mouse[0] < x + self.width and y < mouse[1] < y + self.height:
+            pygame.draw.rect(screen, (224, 232, 246), (x, y, self.width, self.height))
+
+            if click[0] == 1 and action is not None:
+                pygame.time.delay(100)
+                action()
+        else:
+            pygame.draw.rect(screen, (139, 210, 238), (x, y, self.width, self.height))
+        draw_text(screen, text, 35, x, y, True)
+
+
+def draw_pause_menu(screen, functional_buttons, WIDTH_SCREEN, HEIGHT_SCREEN):  # Меню паузы
+    cord_x, cord_y = WIDTH_SCREEN // 2 - 500, HEIGHT_SCREEN // 2 - 300
+
+    pause_group.draw(screen)
+    draw_text(screen, "PORTAL 2D", 60, cord_x + 500, cord_y + 50)
+    text_btn = ["Продолжить", "Перезапустить", "Сохранить", "Загрузить", "Меню"]
+    func_btn = [continue_game, reload_level, save_game, load_game, back_to_menu]
+    for i in range(len(functional_buttons)):
+        functional_buttons[i].draw(cord_x + 50, cord_y + 150 + i * 70, text_btn[i], screen, func_btn[i])
+
+
+def continue_game():  # Продолжение игры
+    global pause_flag
+    pause_flag = False
+
+
+def back_to_menu():  # Возвращение в главное меню
+    global running
+    running = False
+
+
+def save_game():  # Сохранение игры
+    global player, cube, num_level, yellow_portal, blue_portal, now_screen
+    # Название файла сохранения
+    date = str(datetime.datetime.now()).split('.')[0]
+    filename = "data/saves/" + date + ".txt"
+    filename = filename.replace(':', '_')
+
+    # Название файла изображения
+    imagename = "data/saves/images/" + date + ".png"
+    imagename = imagename.replace(':', '_')
+
+    # Запись текущего состояния в файл сохранения
+    file = open(filename, "w")
+    file.write(str(num_level) + "\n")
+    file.write(str(player.rect.left) + " " + str(player.rect.top - 5) + "\n")
+    file.write(str(cube.rect.left) + " " + str(cube.rect.top - 5) + "\n")
+    file.write(str(int(yellow_portal.active)) + " " + str(int(yellow_portal.opened)) + " " +
+               str(yellow_portal.position) + " " +
+               str(yellow_portal.last_x) + " " + str(yellow_portal.last_y) + "\n")
+    file.write(str(int(blue_portal.active)) + " " + str(int(blue_portal.opened)) + " " +
+               str(blue_portal.position) + " " +
+               str(blue_portal.last_x) + " " + str(blue_portal.last_y))
+    file.close()
+
+    # Обновление последнего сохранения
+    file_last_save = open('data/saves/last_save.txt', "w")
+    file_last_save.write(filename)
+    file_last_save.close()
+
+    # Сохранения текущего состояния в виде изображения
+    try:
+        pygame.image.save(now_screen, imagename)
+    except Exception as error:
+        print(error)
+
+
+def load_game():  # Загрузка последнего сохранения
+    global win_flag, running
+    file_level = open('data/save.txt', encoding='utf8')
+    data = file_level.read().split()
+    try:
+        name_last_save = open('data/saves/last_save.txt').readlines()[0]
+    except Exception:
+        return
+    win_flag = 2
+    running = False
+
+
+def reload_level():  # Перезагрузка текущего уровня
+    global win_flag, running
+    win_flag = 3
+    running = False
 
 
 def reinit_groups():  # Обнуление всего, инициализация групп
     global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, construction_group, \
         platform_group, door_group, wire_group, button_group, background_group, cube_group, player_group, \
-        cursor_group, cube_in_level, blue_portal_group, yellow_portal_group, turret_group, bullet_event, bullet_group, \
+        cursor_group, cube_in_level, blue_portal_group, yellow_portal_group, pause_group, arrow_group, \
+        panel_group, bridge_group, bridge_in_level, turret_group, bullet_event, bullet_group, \
         bullet_move_event
     walking_event = 25
     pygame.time.set_timer(walking_event, 100)
@@ -1554,6 +1818,8 @@ def reinit_groups():  # Обнуление всего, инициализаци�
     pygame.time.set_timer(door_event, 1)
     bullet_move_event = 20
     pygame.time.set_timer(bullet_move_event, 2)
+    t_bridge_event = 22
+    pygame.time.set_timer(t_bridge_event, 100)
     player_group = pygame.sprite.Group()
     turret_group = pygame.sprite.Group()
     blue_portal_group = pygame.sprite.Group()
@@ -1573,17 +1839,25 @@ def reinit_groups():  # Обнуление всего, инициализаци�
     wire_group = pygame.sprite.Group()
     button_group = pygame.sprite.Group()
     background_group = pygame.sprite.Group()
+    arrow_group = pygame.sprite.Group()
+    panel_group = pygame.sprite.Group()
+    bridge_group = pygame.sprite.Group()
+    pause_group = pygame.sprite.Group()
 
 
-def load_level(): # Загрузка уровня из файла
+def load_level(filename='data/save.txt'): # Загрузка уровня из файла
     global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, \
         construction_group, platform_group, door_group, wire_group, button_group, \
-        cube_in_level, player, cube, blue_portal, yellow_portal, cursor, background_group, turret_group, \
-        bullet_event, bullet_group
+        cube_in_level, player, cube, blue_portal, yellow_portal, cursor, background_group, \
+        arrow_group, panel_group, bridge_group, bridge_1, bridge_2, pause_group, num_level, \
+        bridge_in_level, turret_group, bullet_event, bullet_group
     # Чтение файла
-    file_level = open('data/save.txt', encoding='utf8')
-    dop = file_level.read()
-    num_level = int(dop.split()[0])
+    file_level = open(filename, encoding='utf8')
+    if filename != 'data/save.txt':
+        dop = file_level.readlines()
+        num_level = int(dop[0])
+    else:
+        num_level = int(file_level.read().split()[0])
     name_file = 'data/level_{}.txt'.format(str(num_level))
     file_objects = open(name_file, encoding='utf8')
     lines = file_objects.readlines()
@@ -1601,6 +1875,15 @@ def load_level(): # Загрузка уровня из файла
     background.rect = background.image.get_rect()
     background.rect.x = 0
     background.rect.y = 0
+
+    # Загрузка окна паузы
+    pause = pygame.sprite.Sprite()
+    pause_group.add(pause)
+    pause_image = load_image("MenuWindow_background.jpg")
+    pause.image = pygame.transform.scale(pause_image, (1000, 600))
+    pause.rect = pause.image.get_rect()
+    pause.rect.x = width // 2 - 500
+    pause.rect.y = height // 2 - 300
 
     # Загрузка стен, потолка и пола
     for k in range(4):
@@ -1654,53 +1937,82 @@ def load_level(): # Загрузка уровня из файла
                  int(lines[k + 6][3]), lines[k + 6][4], interval[0],
                  interval[1], interval[2], interval[3])
 
-    # Дозагрузка всего остального
-    if num_level == 1:
-        cube_in_level = False
-        player = Player(20, 430)
-        cube = Cube(0, 0)
-    elif num_level == 2:
-        cube_in_level = True
-        door_1 = Platform(706, height - 120, 0, 0, '',
-                          [(0, 0)], [(0, 0)], [(0, 0)], [(0, 0)], 'door', 1)
-        button_1 = Button(400, height - 50, door_1,
-                          [Wire(425, 869, 'hor'),
-                           Wire(525, 869, 'hor'),
-                           Wire(625, 869, 'hor')], 0, True)
-        door_2 = Platform(160, 340, 0, 0, '',
-                          [(0, 0)], [(0, 0)], [(0, 0)], [(0, 0)], 'door', 2)
-        button_2 = Button(width - 750, 410, door_2,
-                          [Wire(width - 720, 418, 'hor'), Wire(width - 680, 378, 'ver'),
-                           Wire(width - 680, 278, 'ver'), Wire(width - 680, 178, 'ver'),
-                           Wire(width - 720, 138, 'hor'), Wire(width - 720, 138, 'hor'),
-                           Wire(width - 820, 138, 'hor'), Wire(width - 920, 138, 'hor'),
-                           Wire(width - 1020, 138, 'hor'), Wire(width - 1120, 138, 'hor'),
-                           Wire(width - 1220, 138, 'hor'), Wire(width - 1320, 138, 'hor'),
-                           Wire(width - 1378, 178, 'ver'), Wire(width - 1378, 240, 'ver')], 0, True)
-        button_3 = Button(400, 610, door_2,
-                          [Wire(340, 617, 'hor'), Wire(240, 617, 'hor'),
-                           Wire(140, 617, 'hor'), Wire(40, 617, 'hor'),
-                           Wire(-20, 577, 'ver'), Wire(-20, 479, 'ver'),
-                           Wire(-20, 440, 'ver'), Wire(40, 400, 'hor'),
-                           Wire(80, 400, 'hor')], 1, True)
-        player = Player(20, 800)
-        cube = Cube(270, 800)
-    elif num_level == 3:
-        cube_in_level = False
-        player = Player(150, 870)
-        cube = Cube(0, 0)
-    elif num_level == 4:
-        cube_in_level = True
-        hameleon = Platform(550, 20, 40, 560, '', [(20, 580)],
-                            [(0, 0)], [(0, 0)], [(550, 570)], 'hameleon', 1)
-        button_wire_list = [Wire(590, -20, 'hor'), Wire(690, -20, 'hor'),
-                            Wire(790, -20, 'hor'), Wire(890, -20, 'hor'),
-                            Wire(990, -20, 'hor'), Wire(1090, -20, 'hor'),
-                            Wire(1190, -20, 'hor'), Wire(1230, 40, 'ver'),
-                            Wire(1230, 140, 'ver'), Wire(1190, 180, 'hor')]
-        button = Button(1155, 188, hameleon, button_wire_list, 0)
-        cube = Cube(21, 320)
-        player = Player(150, 670)
+    # Загрузка персонажа
+    last_str = cnt_platforms + 6
+    if filename != "data/save.txt":
+        player = Player(int(dop[1].split()[0]), int(dop[1].split()[1]))
+    else:
+        player = Player(int(lines[last_str][0]), int(lines[last_str][1]))
+
+    # Загрузка куба
+    cube_in_level = bool(int(int(lines[last_str + 1][0])))
+    if filename != "data/save.txt":
+        cube = Cube(int(dop[2].split()[0]), int(dop[2].split()[1]))
+    else:
+        cube = Cube(int(lines[last_str + 2][0]), int(lines[last_str + 2][1]))
+
+    obj_for_buttons = []
+
+    # Загрузка дверей
+    last_str += 3
+    cnt_doors = int(lines[last_str][0])
+    last_str += 1
+    for k in range(cnt_doors):
+        door = Platform(int(lines[last_str + k][0]), int(lines[last_str + k][1]), int(lines[last_str + k][2]),
+                        int(lines[last_str + k][3]), '', [(0, 0)], [(0, 0)],
+                        [(0, 0)], [(0, 0)], lines[last_str + k][4], int(lines[last_str + k][5]))
+        obj_for_buttons.append(door)
+
+    # Загрузка стен-хамелеонов
+    last_str += cnt_doors
+    cnt_hameleons = int(lines[last_str][0])
+    last_str += 1
+    for k in range(cnt_hameleons):
+        hameleon = Platform(int(lines[last_str + k][0]), int(lines[last_str + k][1]), int(lines[last_str + k][2]),
+                            int(lines[last_str + k][3]), '',
+                            [(int(lines[last_str + k][4]), int(lines[last_str + k][5]))],
+                            [(int(lines[last_str + k][6]), int(lines[last_str + k][7]))],
+                            [(int(lines[last_str + k][8]), int(lines[last_str + k][9]))],
+                            [(int(lines[last_str + k][10]), int(lines[last_str + k][11]))],
+                            lines[last_str + k][12], int(lines[last_str + k][13]))
+        obj_for_buttons.append(hameleon)
+
+    # Загрузка кнопок
+    last_str += cnt_hameleons
+    cnt_buttons = int(lines[last_str][0])
+    last_str += 1
+    for k in range(cnt_buttons):
+        button_wire_list = []
+        now_j = 4
+        for i in range(int(lines[last_str + k][3])):
+            button_wire_list.append(Wire(int(lines[last_str + k][now_j]),
+                                         int(lines[last_str + k][now_j + 1]),
+                                         lines[last_str + k][now_j + 2]))
+            now_j += 3
+        button = Button(int(lines[last_str + k][0]), int(lines[last_str + k][1]),
+                        obj_for_buttons[int(lines[last_str + k][2])], button_wire_list,
+                        int(lines[last_str + k][now_j]), bool(int(lines[last_str + k][now_j + 1])))
+
+    # Инициализация порталов
+    blue_portal = Portal('blue')
+    yellow_portal = Portal('yellow')
+    if filename != "data/save.txt":
+        y_p = list(map(int, dop[3].split()))
+        b_p = list(map(int, dop[4].split()))
+
+        if b_p[0] and b_p[1]:
+            blue_portal.active, blue_portal.opened, blue_portal.position, \
+            blue_portal.rect.x, blue_portal.rect.y = b_p[0], b_p[1], b_p[2], b_p[3], b_p[4]
+            blue_portal.portal_open()
+
+        if y_p[0] and y_p[1]:
+            yellow_portal.active, yellow_portal.opened, yellow_portal.position, \
+            yellow_portal.rect.x, yellow_portal.rect.y = y_p[0], y_p[1], y_p[2], y_p[3], y_p[4]
+            yellow_portal.portal_open()
+
+    bridge_in_level = False
+    bridge_1 = Platform(0, 0, 0, 0, 'no', [], [], [], [], 'bridge')
+    bridge_2 = Platform(0, 0, 0, 0, 'no', [], [], [], [], 'bridge')
 
     # Запуск главного цикла
     return game_cycle(screen, size, num_level, floor, wall_left, wall_right)
@@ -1710,8 +2022,9 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
     global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, construction_group, \
         platform_group, door_group, wire_group, button_group, player, cube, blue_portal, yellow_portal, cursor, \
         speed_vertical, speed_horizontal, speed_vertical_cube, speed_horizontal_cube, speed_ver_rez, speed_hor_rez, \
-        speed_ver_rez_cube, speed_hor_rez_cube, player_left_cube, player_right_cube, background_group, turret_group, \
-        bullet_group
+        speed_ver_rez_cube, speed_hor_rez_cube, player_left_cube, player_right_cube, background_group, arrow_group, \
+        panel_group, bridge_group, bridge_1, bridge_2, pause_group, pause_flag, running, win_flag, now_screen, \
+        turret_group, bullet_group
     # декоративные элементы окна
     coords_static = []
     for object in construction_group:
@@ -1728,9 +2041,8 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
     pygame.display.set_caption('Portal 2D')
     pygame.display.set_icon(pygame.image.load('data/icon.gif'))
     # объявление некоторых переменных
-    blue_portal = Portal('blue')
-    yellow_portal = Portal('yellow')
     WIDTH_SCREEN = size[0]
+    HEIGHT_SCREEN = size[1]
     running = True
     speed_vertical = speed_horizontal = 0
     speed_bullet = 10
@@ -1747,6 +2059,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
     player_left_cube = player_right_cube = 0
     flag_stand = True
     flag_stand_cube = True
+    start_ticks = 0
     # изменение курсора
     cursor_image = load_image('cursor.png', colorkey=-1)
     cursor_image = pygame.transform.scale(cursor_image, (50, 50))
@@ -1757,15 +2070,21 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
     go_sound = pygame.mixer.Sound('data/go_sound.wav')
     go_sound.set_volume(0.05)
     groups = [platform_group, button_group, cube_group]
-    win_flag = False
+    win_flag = 0
+    pause_flag = False
+    functional_buttons = [FunctionalButton(400, 40)] * 5
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                pause_flag = not pause_flag
             if event.type == pygame.MOUSEMOTION:
                 # курсор находится не в левом углу изображения, а в середине
                 cursor.rect.left = event.pos[0] - 25
                 cursor.rect.top = event.pos[1] - 25
+            if pause_flag:
+                continue
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     # запуск синего портала
@@ -1814,6 +2133,42 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                     cube.position = True
                     speed_vertical_cube = 1
                     player_left_cube = player_right_cube = 0
+            # Взаимодействие персонажа с воздушной панелью
+            if pygame.sprite.spritecollideany(player, panel_group):
+                panel = pygame.sprite.spritecollide(player, panel_group, False)[0]
+                if player.rect.y + HEIGHT_CHELL - 15 <= panel.rect.y + HEIGHT_PANEL and \
+                        panel.rect.x - WIDTH_CHELL + 50 <= player.rect.x <= panel.rect.x + WIDTH_PANEL - 50:
+                    if not cube.position:
+                        cube.rect.y -= abs(player.rect.y - (panel.rect.y - HEIGHT_CHELL))
+                    player.rect.y = panel.rect.y - HEIGHT_CHELL
+                    speed_horizontal = panel.x_speed
+                    speed_vertical = panel.y_speed
+            # Взаимодействие куба с воздушной панелью
+            if pygame.sprite.spritecollideany(cube, panel_group):
+                panel = pygame.sprite.spritecollide(cube, panel_group, False)[0]
+                if cube.rect.y + HEIGHT_CUBE - 5 <= panel.rect.y + HEIGHT_PANEL and \
+                        panel.rect.x - WIDTH_CUBE <= cube.rect.x <= panel.rect.x + WIDTH_PANEL - WIDTH_CUBE:
+                    cube.rect.y = panel.rect.y - HEIGHT_CUBE
+                    speed_horizontal_cube = panel.x_speed
+                    speed_vertical_cube = panel.y_speed
+            # Телепортирование моста
+            if event.type == t_bridge_event:
+                if pygame.sprite.spritecollideany(bridge_1, blue_portal_group) and blue_portal.opened \
+                        and yellow_portal.opened:
+                    bridge_2.teleport(yellow_portal, WIDTH_SCREEN, HEIGHT_SCREEN)
+                elif pygame.sprite.spritecollideany(bridge_1, yellow_portal_group) and blue_portal.opened \
+                        and yellow_portal.opened:
+                    bridge_2.teleport(blue_portal, WIDTH_SCREEN, HEIGHT_SCREEN)
+                else:
+                    if bridge_1.course == 1:
+                        bridge_2.image = load_image('light bridge hor.png')
+                        bridge_2.image = pygame.transform.scale(bridge_2.image, (20, HEIGHT_BRIDGE))
+                    elif bridge_1.course == 2:
+                        bridge_2.image = load_image('light bridge ver.png')
+                        bridge_2.image = pygame.transform.scale(bridge_2.image, (HEIGHT_BRIDGE, 20))
+                    bridge_2.rect = bridge_2.image.get_rect()
+                    bridge_2.rect.x = bridge_1.rect.x
+                    bridge_2.rect.y = bridge_1.rect.y
             if event.type == walking_event and pygame.key.get_pressed()[97]:
                 # движение влево с учетом взаимодействий
                 pygame.mixer.Sound.play(go_sound)
@@ -1906,7 +2261,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                     player.update(True, False)
                 else:
                     player.update(True, True)
-            # обнуление горизонтальной скорости при встрече мтен
+            # обнуление горизонтальной скорости при встрече стен
             if speed_horizontal < 0 and pygame.sprite.spritecollideany(player, wall_left_group):
                 player.rect.x = wall_left.rect.x - 4
                 speed_horizontal = 0
@@ -1918,7 +2273,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                     (pygame.sprite.collide_mask(player, floor) or not flag_stand):
                 flag_stand = True
                 speed_vertical = -15
-            # событие открытия и закрытия двери и активирования соответственных проводов
+            # событие нажатия на кнопку и активирования соответственных проводов
             if event.type == door_event:
                 for i in button_group:
                     if i.control_thing.activated_list[i.thing_arg]:
@@ -1928,9 +2283,17 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                         for j in i.wire_list:
                             j.wire_off()
                     if i.control_thing.activated_list == [True] * i.control_thing.activated_list_len:
-                        i.control_thing.thing_on()
+                        if i.control_thing == cube:
+                            if cube.t_flag:
+                                cube.thing_on()
+                                cube.t_flag = False
+                                start_ticks = pygame.time.get_ticks()
+                        else:
+                            i.control_thing.thing_on()
                     else:
                         i.control_thing.thing_off()
+            if (pygame.time.get_ticks() - start_ticks) / 1000 > 3:
+                cube.t_flag = True
             # событие падения или прыжка. Изменяет положение перса/куба и их скорость
             if event.type == svobod_pad_event:
                 # учет взаимодействия с полом
@@ -2106,14 +2469,14 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                                 break
                     cube.rect.top -= dop
                     speed_vertical_cube += 1
-                # зануление скоростей персонажа при взаимодействии с полом
+                # зануление скоростей куба при взаимодействии с полом
                 elif pygame.sprite.collide_mask(cube, floor):
                     speed_vertical_cube = 0
                     speed_horizontal_cube = 0
                 # учет горизонтального полета(вылет из портала) куба и персонажа и их
                 # взаимодействий с другими объектами
-                indi_right_left = 'AAAAA'
-                indi_right_left_cube = 'AAAAA'
+                indi_right_left = ''
+                indi_right_left_cube = ''
                 for group in groups[0:3]:
                     for i in group:
                         if speed_horizontal > 0:
@@ -2252,19 +2615,23 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                 else:
                     player.normal(True)
             # запуск метода полёта порталов
-            if not pygame.sprite.spritecollideany(blue_portal, construction_group) and \
+            if (not pygame.sprite.spritecollideany(blue_portal, construction_group) or
+                pygame.sprite.spritecollide(blue_portal, construction_group, False)[0].color == 'no') and \
                     event.type == pfly_event and blue_portal.active and not blue_portal.opened:
                 blue_portal.portal_fly()
-            if not pygame.sprite.spritecollideany(yellow_portal, construction_group) and \
+            if (not pygame.sprite.spritecollideany(yellow_portal, construction_group) or
+                pygame.sprite.spritecollide(yellow_portal, construction_group, False)[0].color == 'no') and \
                     event.type == pfly_event and yellow_portal.active and not yellow_portal.opened:
                 yellow_portal.portal_fly()
             # запуск метода открытия порталов
             if pygame.sprite.spritecollideany(blue_portal, construction_group) and \
                     not blue_portal.opened and blue_portal.active:
-                blue_portal.portal_open()
+                if pygame.sprite.spritecollide(blue_portal, construction_group, False)[0].color != 'no':
+                    blue_portal.portal_open()
             if pygame.sprite.spritecollideany(yellow_portal, construction_group) and not \
                     yellow_portal.opened and yellow_portal.active:
-                yellow_portal.portal_open()
+                if pygame.sprite.spritecollide(yellow_portal, construction_group, False)[0].color != 'no':
+                    yellow_portal.portal_open()
             # начальная проверка прохождения через портал для куба, пресонажа и персонажа, держащего куб
             if blue_portal.active and yellow_portal.active and blue_portal.opened and \
                     yellow_portal.opened:
@@ -2291,14 +2658,14 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
             # учет взаимодействия персонажа с потолком
             if pygame.sprite.spritecollideany(player, ceiling_group) and speed_vertical < 0:
                 speed_vertical = 0
-            # ограничение скорочтей
+            # ограничение скоростей
             if speed_vertical > 75:
                 speed_vertical = 75
             if speed_vertical_cube > 75:
                 speed_vertical_cube = 75
         # выход из цикла при проходе через дверь
         if player.rect.x + WIDTH_CHELL < 25 or player.rect.x > WIDTH_SCREEN - 25:
-            win_flag = True
+            win_flag = 1
             running = False
         screen.fill(pygame.Color("orange"))
         # прорисовка спрайтов
@@ -2308,6 +2675,9 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
         wire_group.draw(screen)
         button_group.draw(screen)
         bullet_group.draw(screen)
+        arrow_group.draw(screen)
+        if bridge_in_level:
+            bridge_group.draw(screen)
         if blue_portal.active:
             blue_portal_group.draw(screen)
         if yellow_portal.active:
@@ -2315,6 +2685,15 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
         if cube_in_level:
             cube_group.draw(screen)
         player_group.draw(screen)
+
+        # Текущий экран для возможного сохранения
+        now_screen = pygame.Surface((WIDTH_SCREEN, HEIGHT_SCREEN))
+        now_screen.blit(screen, (0, 0), (0, 0, WIDTH_SCREEN, HEIGHT_SCREEN))
+
+        # Меню паузы
+        if pause_flag:
+            draw_pause_menu(screen, functional_buttons, WIDTH_SCREEN, HEIGHT_SCREEN)
+
         if pygame.mouse.get_focused():
             cursor_group.draw(screen)
         pygame.display.flip()
