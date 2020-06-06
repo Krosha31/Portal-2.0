@@ -17,7 +17,7 @@ HEIGHT_RED_ARROW = 53
 WIDTH_DOOR = 20
 HEIGHT_DOOR = 100
 WIDTH_PANEL = 100
-HEIGHT_PANEL = 20
+HEIGHT_PANEL = 30
 HEIGHT_BRIDGE = 20
 STEP = 20
 speed_vertical = speed_horizontal = 0
@@ -30,7 +30,7 @@ pfly_event = 26
 pygame.time.set_timer(pfly_event, 25)
 door_event = 23
 t_bridge_event = 22
-pygame.time.set_timer(t_bridge_event, 100)
+pygame.time.set_timer(t_bridge_event, 1)
 cube_in_level = True
 speed_bullet = 10
 pygame.time.set_timer(door_event, 100)
@@ -336,6 +336,14 @@ class Player(pygame.sprite.Sprite):  # класс персонажа
                         self.rect.y - 63 < cube.rect.y < self.rect.y + 93:
                     cube.rect.y = self.rect.y + 93
                 speed_horizontal = 0
+            if blue_portal.position == 1 or blue_portal.position == 3:
+                while len(pygame.sprite.spritecollide(player, bridge_group, False)) > 0:
+                    self.rect.y -= 1
+                self.rect.y -= 1
+            elif blue_portal.position == 2 or blue_portal.position == 4:
+                while len(pygame.sprite.spritecollide(player, bridge_group, False)) > 0:
+                    self.rect.x -= 1
+                self.rect.x -= 1
         elif color == 'yellow':
             if yellow_portal.position == 1:
                 flag_right = True
@@ -425,6 +433,14 @@ class Player(pygame.sprite.Sprite):  # класс персонажа
                         self.rect.y - 63 < cube.rect.y < self.rect.y + 93:
                     cube.rect.y = self.rect.y + 93
                 speed_horizontal = 0
+            if yellow_portal.position == 1 or yellow_portal.position == 3:
+                while len(pygame.sprite.spritecollide(player, bridge_group, False)) > 0:
+                    self.rect.y -= 1
+                self.rect.y -= 1
+            elif yellow_portal.position == 2 or yellow_portal.position == 4:
+                while len(pygame.sprite.spritecollide(player, bridge_group, False)) > 0:
+                    self.rect.x -= 1
+                self.rect.x -= 1
         if flag_side != '':
             speed_vertical_cube = speed_vertical
             speed_horizontal_cube = speed_horizontal
@@ -581,7 +597,7 @@ class AirPanel(pygame.sprite.Sprite):  # Класс воздушных пане�
         self.x_speed = x_speed
         self.y_speed = -y_speed
         self.w = WIDTH_PANEL
-        self.h = WIDTH_PANEL
+        self.h = HEIGHT_PANEL
         self.image = load_image('air panel.gif')
         self.image = pygame.transform.scale(self.image, (WIDTH_PANEL, HEIGHT_PANEL))
         self.rect = self.image.get_rect()
@@ -589,8 +605,8 @@ class AirPanel(pygame.sprite.Sprite):  # Класс воздушных пане�
 
 
 class Platform(pygame.sprite.Sprite):
-    # класс платформ, который включает в себя еще и двери
-    # загрузка изображений платформ или двери
+    # класс платформ, который включает в себя еще и двери и платформы-хамелеоны и мосты света
+    # загрузка изображений платформ или двери или платформы-хамелеона или моста света
     def __init__(self, x, y, w, h, color, int_sp_1, int_sp_2, int_sp_3,
                  int_sp_4, p_type='n', act_list_l=0, speed_k=1, course=1):
         if p_type == 'n':
@@ -606,27 +622,26 @@ class Platform(pygame.sprite.Sprite):
             h = HEIGHT_DOOR
             self.image = load_image('door.gif')
             self.y = y
-            self.speed = 1
+            self.speed = 10
         elif p_type == 'hameleon':
             super().__init__(all_sprites, construction_group, platform_group)
             color = 'black'
             self.image = load_image('black.png')
-        self.w = w
-        self.h = h
-        if p_type == 'bridge':
+        elif p_type == 'bridge':
             super().__init__(all_sprites, construction_group, platform_group, bridge_group)
             color = 'no'
             self.course = course
             if not bridge_in_level:
                 x, y, w, h = -100, -100, 1, 1
             if course == 1:
-                self.w = w
-                self.h = HEIGHT_BRIDGE
+                h = HEIGHT_BRIDGE
                 self.image = load_image('light bridge hor.png')
             elif course == 2:
-                self.w = HEIGHT_BRIDGE
-                self.h = w
+                h = w
+                w = HEIGHT_BRIDGE
                 self.image = load_image('light bridge ver.png')
+        self.w = w
+        self.h = h
         self.activated_list = [False] * act_list_l
         self.activated_list_len = act_list_l
         self.p_type = p_type
@@ -827,7 +842,7 @@ class Platform(pygame.sprite.Sprite):
                 yellow_portal.active = False
                 yellow_portal.opened = False
 
-    def teleport(self, portal, WIDTH_SCREEN, HEIGHT_SCREEN):
+    def teleport(self, portal, WIDTH_SCREEN, HEIGHT_SCREEN):  # Метод телепортирования моста
         if portal.position == 1:
             self.image = load_image('light bridge hor.png')
             self.image = pygame.transform.scale(self.image, (portal.rect.x, HEIGHT_BRIDGE))
@@ -894,6 +909,12 @@ class Platform(pygame.sprite.Sprite):
             self.rect = self.image.get_rect()
             self.rect.x = portal.rect.x + HEIGHT_PORTAL - HEIGHT_BRIDGE
             self.rect.y = portal.rect.y + WIDTH_PORTAL
+        if pygame.sprite.spritecollideany(player, bridge_group) and \
+                (((portal.position == 2 or portal.position == 4) and
+                  self.rect.x - WIDTH_CHELL + 26 < player.rect.x < self.rect.x - 6) or
+                 ((portal.position == 1 or portal.position == 3) and
+                  self.rect.y - HEIGHT_CHELL + 10 < player.rect.y < self.rect.y + HEIGHT_BRIDGE - 10)):
+            death_player()
 
 
 class Cube(pygame.sprite.Sprite):
@@ -1166,6 +1187,7 @@ class Cube(pygame.sprite.Sprite):
         if self.type == 't':
             self.rect.x = self.t_x
             self.rect.y = self.t_y
+            self.position = True
 
     def thing_off(self):  # Метод реагирования куба на разжатие кнопки
         if self.type == 't':
@@ -1664,24 +1686,36 @@ class Turret(pygame.sprite.Sprite):
         self.h = 70
         self.life = True
         self.color = 'black'
+        self.activated_list = [False]
+        self.activated_list_len = 1
         self.image = pygame.transform.scale(self.image, (self.w, self.h))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.rect = self.rect.move(x, y)
 
     def death(self):
-        self.image = load_image('turret_right.gif')
+        if self.napr == 'right':
+            self.image = load_image('turret_right.gif')
+        elif self.napr == 'left':
+            self.image = load_image('turret_left.gif')
         self.image = pygame.transform.scale(self.image, (70, 20))
         self.h = 20
         self.rect.top += 50
         self.life = False
 
-    def christ_is_risen(self):
-        self.image = load_image('turret_right.gif')
-        self.image = pygame.transform.scale(self.image, (70, 70))
-        self.h = 70
-        self.rect.top -= 50
-        self.life = True
+    def thing_on(self):  # Функция реагирования турели на нажатие кнопки
+        if not self.life:
+            if self.napr == 'right':
+                self.image = load_image('turret_right.gif')
+            elif self.napr == 'left':
+                self.image = load_image('turret_left.gif')
+            self.image = pygame.transform.scale(self.image, (70, 70))
+            self.h = 70
+            self.rect.top -= 50
+            self.life = True
+
+    def thing_off(self):  # Функция реагирования турели на разжатие кнопки
+        pass
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -1839,11 +1873,11 @@ def reinit_groups():  # Обнуление всего, инициализаци�
     pfly_event = 26
     pygame.time.set_timer(pfly_event, 1)
     door_event = 23
-    pygame.time.set_timer(door_event, 1)
+    pygame.time.set_timer(door_event, 100)
     bullet_move_event = 20
     pygame.time.set_timer(bullet_move_event, 2)
     t_bridge_event = 22
-    pygame.time.set_timer(t_bridge_event, 100)
+    pygame.time.set_timer(t_bridge_event, 1)
     player_group = pygame.sprite.Group()
     turret_group = pygame.sprite.Group()
     blue_portal_group = pygame.sprite.Group()
@@ -2177,23 +2211,22 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                     speed_horizontal_cube = panel.x_speed
                     speed_vertical_cube = panel.y_speed
             # Телепортирование моста
-            if event.type == t_bridge_event:
-                if pygame.sprite.spritecollideany(bridge_1, blue_portal_group) and blue_portal.opened \
-                        and yellow_portal.opened:
-                    bridge_2.teleport(yellow_portal, WIDTH_SCREEN, HEIGHT_SCREEN)
-                elif pygame.sprite.spritecollideany(bridge_1, yellow_portal_group) and blue_portal.opened \
-                        and yellow_portal.opened:
-                    bridge_2.teleport(blue_portal, WIDTH_SCREEN, HEIGHT_SCREEN)
-                else:
-                    if bridge_1.course == 1:
-                        bridge_2.image = load_image('light bridge hor.png')
-                        bridge_2.image = pygame.transform.scale(bridge_2.image, (20, HEIGHT_BRIDGE))
-                    elif bridge_1.course == 2:
-                        bridge_2.image = load_image('light bridge ver.png')
-                        bridge_2.image = pygame.transform.scale(bridge_2.image, (HEIGHT_BRIDGE, 20))
-                    bridge_2.rect = bridge_2.image.get_rect()
-                    bridge_2.rect.x = bridge_1.rect.x
-                    bridge_2.rect.y = bridge_1.rect.y
+            if pygame.sprite.spritecollideany(bridge_1, blue_portal_group) and blue_portal.opened \
+                    and yellow_portal.opened:
+                bridge_2.teleport(yellow_portal, WIDTH_SCREEN, HEIGHT_SCREEN)
+            elif pygame.sprite.spritecollideany(bridge_1, yellow_portal_group) and blue_portal.opened \
+                    and yellow_portal.opened:
+                bridge_2.teleport(blue_portal, WIDTH_SCREEN, HEIGHT_SCREEN)
+            else:
+                if bridge_1.course == 1:
+                    bridge_2.image = load_image('light bridge hor.png')
+                    bridge_2.image = pygame.transform.scale(bridge_2.image, (20, HEIGHT_BRIDGE))
+                elif bridge_1.course == 2:
+                    bridge_2.image = load_image('light bridge ver.png')
+                    bridge_2.image = pygame.transform.scale(bridge_2.image, (HEIGHT_BRIDGE, 20))
+                bridge_2.rect = bridge_2.image.get_rect()
+                bridge_2.rect.x = bridge_1.rect.x
+                bridge_2.rect.y = bridge_1.rect.y
             if event.type == walking_event and pygame.key.get_pressed()[97]:
                 # движение влево с учетом взаимодействий
                 pygame.mixer.Sound.play(go_sound)
@@ -2311,6 +2344,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                         if i.control_thing == cube:
                             if cube.t_flag:
                                 cube.thing_on()
+                                player_left_cube = player_right_cube = 0
                                 cube.t_flag = False
                                 start_ticks = pygame.time.get_ticks()
                         else:
