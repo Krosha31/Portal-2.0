@@ -28,6 +28,9 @@ class LevelsWindow(QWidget):
         super().__init__()
         uic.loadUi("data/LevelsWindow.ui", self)
         self.click_sound = pygame.mixer.Sound('data/click_sound.wav')
+        self.window = None
+        self.error_message = None
+        self.hack = False
         self.initUI()
 
     def initUI(self):
@@ -42,11 +45,14 @@ class LevelsWindow(QWidget):
         # Загрузка кнопок
         self.setting_buttons()
 
-        # Загрузка изображений
-        self.load_maps()
+        # Загрузка таблицы уровней
+        self.load_table()
 
         # Изменение названия главного окна
         self.setWindowTitle("Portal")
+
+        # Настройка надписи
+        self.label.setStyleSheet("color: rgb(255, 255, 255)")
 
         file_level = open('data/save.txt', encoding='utf8')
         data = file_level.read().split()
@@ -60,16 +66,42 @@ class LevelsWindow(QWidget):
         pygame.mixer.music.set_volume(0.5)
         pygame.mixer.music.play(-1)
 
-    def load_maps(self):
-        # Загрузка картинок карт
-        self.pixmap = QPixmap("data/level_1_image.png")
-        self.label_2.setPixmap(self.pixmap)
-        self.pixmap = QPixmap("data/level_2_image.png")
-        self.label_4.setPixmap(self.pixmap)
-        self.pixmap = QPixmap("data/level_3_image.png")
-        self.label_6.setPixmap(self.pixmap)
-        self.pixmap = QPixmap("data/level_4_image.png")
-        self.label_8.setPixmap(self.pixmap)
+    def keyPressEvent(self, event):
+        if int(event.modifiers()) == (Qt.AltModifier + Qt.ShiftModifier):
+            if event.key() == Qt.Key_P:
+                self.hack = True
+
+    def load_table(self):
+        # Настройка стиля таблицы
+        style = "background-color: rgb(18,115,166);" \
+                "color: rgb(255,255,255);"
+        self.tableWidget.setStyleSheet(style)
+
+        # Настройка вида таблицы
+        fnt = self.tableWidget.font()
+        fnt.setPointSize(25)
+        self.tableWidget.setFont(fnt)
+        self.tableWidget.setColumnCount(2)
+        self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.tableWidget.horizontalHeader().hide()
+        self.tableWidget.verticalHeader().hide()
+        self.tableWidget.setRowCount(4)
+
+        for i in range(4):
+            self.tableWidget.setItem(i, 1, QTableWidgetItem("Уровень " + str(i + 1)))
+            try:
+                image = ImageWidget("data/level_" + str(i + 1) + "_image.png", self.tableWidget)
+                layout = QHBoxLayout()
+                layout.addWidget(image, 0, Qt.AlignCenter)
+                self.tableWidget.setCellWidget(i, 0, image)
+                self.tableWidget.setRowHeight(i, 300)
+            except Exception as error:
+                print(error)
+            self.tableWidget.cellClicked.connect(self.load_level)
+
+        header = self.tableWidget.horizontalHeader()
+        self.tableWidget.resizeColumnsToContents()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
 
     def setting_buttons(self):
         # Стиль кнопок
@@ -83,18 +115,6 @@ class LevelsWindow(QWidget):
                 '''
 
         # Настройка кнопок
-        self.pushButton.setStyleSheet(style_buttons)
-        self.pushButton.clicked.connect(self.load_level)
-
-        self.pushButton_2.setStyleSheet(style_buttons)
-        self.pushButton_2.clicked.connect(self.load_level)
-
-        self.pushButton_3.setStyleSheet(style_buttons)
-        self.pushButton_3.clicked.connect(self.load_level)
-
-        self.pushButton_4.setStyleSheet(style_buttons)
-        self.pushButton_4.clicked.connect(self.load_level)
-
         self.pushButton_5.setStyleSheet(style_buttons)
         self.pushButton_5.clicked.connect(self.return_in_menu)
 
@@ -112,29 +132,15 @@ class LevelsWindow(QWidget):
         self.window.show()
         self.close()
 
-    def load_level(self):
-        # Запуск выбранного уровня
-        pygame.mixer.Sound.play(self.click_sound)
-        name = int(self.sender().text()[-1])
-        if name > self.max_level:
-            # Проверка на пройденность
-            error_message = QErrorMessage(self)
-            error_message.showMessage("Вы еще не прошли этот уровень")
+    def load_level(self, row, col):
+        if row + 1 > self.max_level and not self.hack:
             return
-        # Запуск уровня name
-        file_level = open('data/save.txt', 'w')
-        file_level.write(str(name) + ' ' + str(self.max_level))
-        file_level.close()
-        self.reinit_pygame()
-        self.hide()
-        reinit_groups()
-        load_level()
-        file_level = open('data/save.txt', 'w')
-        file_level.write(str(self.num_level) + ' ' + str(self.max_level))
-        file_level.close()
-        reinit_groups()
-        self.reinit_pygame()
-        self.show()
+        # Запуск выбранного уровня
+        if self.window is None:
+            self.close()
+            self.window = MainWindow()
+            self.window.show()
+            self.window.load_lev(row + 1)
 
 
 class SavesWindow(QWidget):
@@ -495,7 +501,7 @@ class MainWindow(QMainWindow):
         self.reinit_pygame()
         self.hide()
         reinit_groups()
-        win_flag = load_level(savename)
+        win_flag = load_level(filename=savename)
         reinit_groups()
 
         while num_level < 4 and win_flag == 1:
@@ -522,6 +528,29 @@ class MainWindow(QMainWindow):
             reinit_groups()
             self.reinit_pygame()
             self.game_continue()
+        else:
+            reinit_groups()
+            self.reinit_pygame()
+            self.show()
+
+    def load_lev(self, num_level):
+        self.reinit_pygame()
+        pygame.mixer.Sound.play(self.click_sound)
+        # Продолжение игры
+        self.reinit_pygame()
+        self.hide()
+        reinit_groups()
+        win_flag = load_level(val=num_level)
+        reinit_groups()
+
+        if win_flag == 2:
+            reinit_groups()
+            self.reinit_pygame()
+            self.game_last_save()
+        elif win_flag == 3:
+            reinit_groups()
+            self.reinit_pygame()
+            self.load_lev(num_level)
         else:
             reinit_groups()
             self.reinit_pygame()
