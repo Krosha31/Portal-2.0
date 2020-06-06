@@ -44,6 +44,8 @@ cursor_group = pygame.sprite.Group()
 cube_group = pygame.sprite.Group()
 background_group = pygame.sprite.Group()
 player_left_cube = player_right_cube = 0
+death = False
+death_clock = pygame.time.Clock()
 
 
 def load_image(name, colorkey=None):  # Загрузка изображения
@@ -58,8 +60,11 @@ def load_image(name, colorkey=None):  # Загрузка изображения
     return image
 
 
-def death():
-    print('СДОХ!')
+def death_player():
+    global death, death_clock, running
+    death = True
+    death_clock.tick()
+    running = False
 
 
 def cross(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2):
@@ -577,6 +582,8 @@ class AirPanel(pygame.sprite.Sprite):  # Класс воздушных пане�
         self.color = 'black'
         self.x_speed = x_speed
         self.y_speed = -y_speed
+        self.w = WIDTH_PANEL
+        self.h = WIDTH_PANEL
         self.image = load_image('air panel.gif')
         self.image = pygame.transform.scale(self.image, (WIDTH_PANEL, HEIGHT_PANEL))
         self.rect = self.image.get_rect()
@@ -1667,13 +1674,19 @@ class Turret(pygame.sprite.Sprite):
         self.rect = self.rect.move(x, y)
 
     def death(self):
-        global speed_vertical, speed_horizontal
-        speed_vertical = speed_horizontal = 0
         self.image = load_image('turret_right.gif')
         self.image = pygame.transform.scale(self.image, (70, 20))
         pygame.mixer.Sound.play(self.turret_die_sound)
         self.h = 20
         self.rect.top += 50
+        self.life = False
+
+    def christ_is_risen(self):
+        self.image = load_image('turret_right.gif')
+        self.image = pygame.transform.scale(self.image, (70, 70))
+        self.h = 70
+        self.rect.top -= 50
+        self.life = True
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -1698,6 +1711,18 @@ class Bullet(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.rect = self.rect.move(x2, y2)
+
+
+class Acid(pygame.sprite.Sprite):
+    def __init__(self, x, y, w, h,):
+        super().__init__(acid_group)
+        self.image = load_image('acid.jpg')
+        self.w = w
+        self.h = h
+        self.image = pygame.transform.scale(self.image, (self.w, self.h))
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect = self.image.get_rect()
+        self.rect = self.rect.move(x, y)
         
         
 def draw_text(screen, message, size_font, x, y, flag=False):  # Функция рисования текста
@@ -1811,7 +1836,7 @@ def reinit_groups():  # Обнуление всего, инициализаци�
         platform_group, door_group, wire_group, button_group, background_group, cube_group, player_group, \
         cursor_group, cube_in_level, blue_portal_group, yellow_portal_group, pause_group, arrow_group, \
         panel_group, bridge_group, bridge_in_level, turret_group, bullet_event, bullet_group, \
-        bullet_move_event
+        bullet_move_event, acid_group
     walking_event = 25
     pygame.time.set_timer(walking_event, 100)
     svobod_pad_event = 24
@@ -1830,6 +1855,7 @@ def reinit_groups():  # Обнуление всего, инициализаци�
     yellow_portal_group = pygame.sprite.Group()
     cursor_group = pygame.sprite.Group()
     cube_group = pygame.sprite.Group()
+    acid_group = pygame.sprite.Group()
     background_group = pygame.sprite.Group()
     all_sprites = pygame.sprite.Group()
     wall_left_group = pygame.sprite.Group()
@@ -1855,7 +1881,6 @@ def load_level(filename='data/save.txt'): # Загрузка уровня из �
         cube_in_level, player, cube, blue_portal, yellow_portal, cursor, background_group, \
         arrow_group, panel_group, bridge_group, bridge_1, bridge_2, pause_group, num_level, \
         bridge_in_level, turret_group, bullet_event, bullet_group
-    # Чтение файла
     file_level = open(filename, encoding='utf8')
     if filename != 'data/save.txt':
         dop = file_level.readlines()
@@ -1867,7 +1892,6 @@ def load_level(filename='data/save.txt'): # Загрузка уровня из �
     lines = file_objects.readlines()
     for i in range(len(lines)):
         lines[i] = lines[i].split()
-
     # Загрузка окна и фона
     size = int(lines[0][0]), int(lines[0][1])
     width, height = size[0], size[1]
@@ -2029,23 +2053,20 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
         speed_vertical, speed_horizontal, speed_vertical_cube, speed_horizontal_cube, speed_ver_rez, speed_hor_rez, \
         speed_ver_rez_cube, speed_hor_rez_cube, player_left_cube, player_right_cube, background_group, arrow_group, \
         panel_group, bridge_group, bridge_1, bridge_2, pause_group, pause_flag, running, win_flag, now_screen, \
-        turret_group, bullet_group
+        turret_group, bullet_group, death, acid_group
     # декоративные элементы окна
     coords_static = []
-    try:
-        for object in construction_group:
-            if object == cube or object in platform_group and object.p_type == 'door':
-                continue
-            coords_static.append([[object.rect.left, object.rect.top,
-                           object.rect.left + object.w, object.rect.top],
-                                  [object.rect.left, object.rect.top,
-                           object.rect.left, object.rect.top + object.h],
-                                  [object.rect.left, object.rect.top + object.h,
-                           object.rect.left + object.w, object.rect.top + object.h],
-                                  [object.rect.left + object.w, object.rect.top,
-                           object.rect.left + object.w, object.rect.top + object.h]])
-    except Exception as error:
-        print(error)
+    for object in construction_group:
+        if object == cube or object in platform_group and (object.p_type == 'door' or object.p_type == 'bridge'):
+            continue
+        coords_static.append([[object.rect.left, object.rect.top,
+                       object.rect.left + object.w, object.rect.top],
+                              [object.rect.left, object.rect.top,
+                       object.rect.left, object.rect.top + object.h],
+                              [object.rect.left, object.rect.top + object.h,
+                       object.rect.left + object.w, object.rect.top + object.h],
+                              [object.rect.left + object.w, object.rect.top,
+                       object.rect.left + object.w, object.rect.top + object.h]])
     pygame.display.set_caption('Portal 2D')
     pygame.display.set_icon(pygame.image.load('data/icon.gif'))
     # объявление некоторых переменных
@@ -2065,6 +2086,8 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
     speed_ver_rez = speed_hor_rez = 0
     speed_ver_rez_cube = speed_hor_rez_cube = 0
     player_left_cube = player_right_cube = 0
+    death_time = 0
+    death_clock = pygame.time.Clock()
     flag_stand = True
     flag_stand_cube = True
     start_ticks = 0
@@ -2536,7 +2559,12 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                 if turret.life:
                     if pygame.sprite.collide_mask(turret, player):
                         turret.death()
-                        turret.life = False
+                        speed_horizontal = 0
+                        speed_vertical = 0
+                    elif pygame.sprite.collide_mask(turret, cube):
+                        turret.death()
+                        speed_horizontal_cube = 0
+                        speed_vertical_cube = 1
             if event.type == bullet_event:
                 dop_count = 0
                 if len(turret_group) != 0:
@@ -2580,7 +2608,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                                 if result:
                                     break
                         if not result:
-                            for group in [door_group]:
+                            for group in [door_group, bridge_group]:
                                 for object in group:
                                     if object == turret or object == cube:
                                         continue
@@ -2616,7 +2644,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                     bullet.rect.top += bullet.yplus
                     if pygame.sprite.collide_mask(bullet, player):
                         bullet.kill()
-                        death()
+                        death_player()
                     elif pygame.sprite.spritecollideany(bullet, construction_group) and not \
                             pygame.sprite.spritecollideany(bullet, turret_group):
                         bullet.kill()
@@ -2670,6 +2698,10 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
             # учет взаимодействия персонажа с потолком
             if pygame.sprite.spritecollideany(player, ceiling_group) and speed_vertical < 0:
                 speed_vertical = 0
+            for acid in acid_group:
+                if pygame.sprite.collide_mask(player, acid):
+                    player.rect.top += 10
+                    death_player()
             # ограничение скоростей
             if speed_vertical > 75:
                 speed_vertical = 75
@@ -2697,6 +2729,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
         if cube_in_level:
             cube_group.draw(screen)
         player_group.draw(screen)
+        acid_group.draw(screen)
 
         # Текущий экран для возможного сохранения
         now_screen = pygame.Surface((WIDTH_SCREEN, HEIGHT_SCREEN))
@@ -2709,5 +2742,24 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
         if pygame.mouse.get_focused():
             cursor_group.draw(screen)
         pygame.display.flip()
+    if death:
+        running = True
+        background = pygame.sprite.Sprite()
+        background_group.add(background)
+        background_image = load_image("youdied.jpg")
+        background.image = pygame.transform.scale(background_image, (size[0], size[1]))
+        background.rect = background.image.get_rect()
+        background.rect.x = 0
+        background.rect.y = 0
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                death_time += death_clock.tick()
+                if death_time >= 3000:
+                    death = False
+                    reload_level()
+            background_group.draw(screen)
+            pygame.display.flip()
     pygame.quit()
     return win_flag
