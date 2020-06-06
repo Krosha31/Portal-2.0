@@ -33,6 +33,8 @@ t_bridge_event = 22
 pygame.time.set_timer(t_bridge_event, 100)
 cube_in_level = True
 speed_bullet = 10
+turret_shot_sound = pygame.mixer.Sound('data/turret_shot_sound.wav')
+airpanel_sound = pygame.mixer.Sound('data/airpanel_sound.wav')
 pygame.time.set_timer(door_event, 100)
 bridge_in_level = True
 player_group = pygame.sprite.Group()
@@ -1660,6 +1662,8 @@ class Turret(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, (self.w, self.h))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
+        self.turret_die_sound = pygame.mixer.Sound('data/turret_die_sound.wav')
+        self.turret_die_sound.set_volume(0.5)
         self.rect = self.rect.move(x, y)
 
     def death(self):
@@ -1667,6 +1671,7 @@ class Turret(pygame.sprite.Sprite):
         speed_vertical = speed_horizontal = 0
         self.image = load_image('turret_right.gif')
         self.image = pygame.transform.scale(self.image, (70, 20))
+        pygame.mixer.Sound.play(self.turret_die_sound)
         self.h = 20
         self.rect.top += 50
 
@@ -2009,6 +2014,7 @@ def load_level(filename='data/save.txt'): # Загрузка уровня из �
             yellow_portal.rect.x, yellow_portal.rect.y = y_p[0], y_p[1], y_p[2], y_p[3], y_p[4]
             yellow_portal.portal_open()
 
+    AirPanel(100, 100, 10, 20)
     bridge_in_level = False
     bridge_1 = Platform(0, 0, 0, 0, 'no', [], [], [], [], 'bridge')
     bridge_2 = Platform(0, 0, 0, 0, 'no', [], [], [], [], 'bridge')
@@ -2026,17 +2032,20 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
         turret_group, bullet_group
     # декоративные элементы окна
     coords_static = []
-    for object in construction_group:
-        if object == cube or object in platform_group and object.p_type == 'door':
-            continue
-        coords_static.append([[object.rect.left, object.rect.top,
-                       object.rect.left + object.w, object.rect.top],
-                              [object.rect.left, object.rect.top,
-                       object.rect.left, object.rect.top + object.h],
-                              [object.rect.left, object.rect.top + object.h,
-                       object.rect.left + object.w, object.rect.top + object.h],
-                              [object.rect.left + object.w, object.rect.top,
-                       object.rect.left + object.w, object.rect.top + object.h]])
+    try:
+        for object in construction_group:
+            if object == cube or object in platform_group and object.p_type == 'door':
+                continue
+            coords_static.append([[object.rect.left, object.rect.top,
+                           object.rect.left + object.w, object.rect.top],
+                                  [object.rect.left, object.rect.top,
+                           object.rect.left, object.rect.top + object.h],
+                                  [object.rect.left, object.rect.top + object.h,
+                           object.rect.left + object.w, object.rect.top + object.h],
+                                  [object.rect.left + object.w, object.rect.top,
+                           object.rect.left + object.w, object.rect.top + object.h]])
+    except Exception as error:
+        print(error)
     pygame.display.set_caption('Portal 2D')
     pygame.display.set_icon(pygame.image.load('data/icon.gif'))
     # объявление некоторых переменных
@@ -2140,6 +2149,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                     if not cube.position:
                         cube.rect.y -= abs(player.rect.y - (panel.rect.y - HEIGHT_CHELL))
                     player.rect.y = panel.rect.y - HEIGHT_CHELL
+                    pygame.mixer.Sound.play(airpanel_sound)
                     speed_horizontal = panel.x_speed
                     speed_vertical = panel.y_speed
             # Взаимодействие куба с воздушной панелью
@@ -2148,6 +2158,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                 if cube.rect.y + HEIGHT_CUBE - 5 <= panel.rect.y + HEIGHT_PANEL and \
                         panel.rect.x - WIDTH_CUBE <= cube.rect.x <= panel.rect.x + WIDTH_PANEL - WIDTH_CUBE:
                     cube.rect.y = panel.rect.y - HEIGHT_CUBE
+                    pygame.mixer.Sound.play(airpanel_sound)
                     speed_horizontal_cube = panel.x_speed
                     speed_vertical_cube = panel.y_speed
             # Телепортирование моста
@@ -2595,8 +2606,10 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                                             break
                         if turret.napr == 'right' and not result:
                             Bullet(x1, y1, x2, y2, 'right', turret)
+                            pygame.mixer.Sound.play(turret_shot_sound)
                         elif not result:
                             Bullet(x1, y1, x2, y2, 'left', turret)
+                            pygame.mixer.Sound.play(turret_shot_sound)
             if event.type == bullet_move_event:
                 for bullet in bullet_group:
                     bullet.rect.left += bullet.xplus
