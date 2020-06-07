@@ -29,8 +29,6 @@ pygame.time.set_timer(svobod_pad_event, 25)
 pfly_event = 26
 pygame.time.set_timer(pfly_event, 25)
 door_event = 23
-t_bridge_event = 22
-pygame.time.set_timer(t_bridge_event, 1)
 cube_in_level = True
 speed_bullet = 10
 turret_shot_sound = pygame.mixer.Sound('data/turret_shot_sound.wav')
@@ -187,7 +185,7 @@ class Player(pygame.sprite.Sprite):  # класс персонажа
             image = pygame.transform.scale(image, (HEIGHT_CHELL, WIDTH_CHELL))
             self.right_frames.append(image)
 
-    def update(self, curse, look):  # функция обновления изображений
+    def update(self, curse, look):  # функция обновления изображений при ходьбе
         if curse and look:
             self.cur_frame = (self.cur_frame + 1) % len(self.right_frames)
             self.image = self.right_frames[self.cur_frame]
@@ -228,7 +226,8 @@ class Player(pygame.sprite.Sprite):  # класс персонажа
 
     def teleport(self, color, position):
         # телепортация персонажа (с кубом, если он его держит), сохранение скоростей,
-        # двигание куба персонажем при телепортации при необхадимости
+        # двигание куба персонажем при телепортации при необходимости
+        # постановка нужных координат персонажа при взаимодействии с мостом света после телепортации
         global speed_vertical, speed_horizontal, speed_ver_rez, speed_hor_rez, speed_vertical_cube, \
             speed_horizontal_cube
         teleport_sound = pygame.mixer.Sound('data/teleport_sound.wav')
@@ -530,7 +529,7 @@ class Player(pygame.sprite.Sprite):  # класс персонажа
             return False
 
 
-class Arrow(pygame.sprite.Sprite):  # Класс стрелочек
+class Arrow(pygame.sprite.Sprite):  # Класс указующих стрелочек
     def __init__(self, x, y, color, course='r'):  # Загрузка изображений стрелочек
         super().__init__(arrow_group)
         if color == 'blue':
@@ -798,7 +797,7 @@ class Platform(pygame.sprite.Sprite):
             return False
 
     def stand_or_not_stand_cube(self):
-        # функция, определяющая стоит ли персонаж на платформе
+        # функция, определяющая стоит ли куб на платформе
         if cube.rect.left + WIDTH_CUBE < self.rect.x or \
                 cube.rect.left > self.rect.x + self.rect.w or self.rect.y - \
                 cube.rect.top - HEIGHT_CUBE:
@@ -823,7 +822,7 @@ class Platform(pygame.sprite.Sprite):
             self.image = pygame.transform.scale(self.image, (self.w, self.h))
 
     def thing_off(self):
-        # Делает платформу чёрной, если это хамелеон, закрывает дверь, если это дверь
+        # Делает платформу чёрной и закрывет стоящие на ней порталы, если это хамелеон, закрывает дверь, если это дверь
         if self.p_type == 'door':
             if self.speed_k:
                 self.rect.y += self.speed
@@ -844,7 +843,8 @@ class Platform(pygame.sprite.Sprite):
                 yellow_portal.active = False
                 yellow_portal.opened = False
 
-    def teleport(self, portal, WIDTH_SCREEN, HEIGHT_SCREEN):  # Метод телепортирования моста
+    def teleport(self, portal, WIDTH_SCREEN, HEIGHT_SCREEN):  # Метод телепортирования моста и запуска смерти
+        # персонажа, если мост проходит сквозь него при телепортировании
         if portal.position == 1:
             self.image = load_image('light bridge hor.png')
             self.image = pygame.transform.scale(self.image, (portal.rect.x, HEIGHT_BRIDGE))
@@ -1031,7 +1031,8 @@ class Cube(pygame.sprite.Sprite):
                 self.teleport('blue', yellow_portal.position)
 
     def teleport(self, color, position):
-        # телепортирование куба, сохранение скоростей, двигание куба или персонажа при необходимости
+        # телепортирование куба, сохранение скоростей, двигание куба или персонажа при необходимости,
+        # двигание куба на нужные координаты при взаимодействии с мостом света при телепортиовании
         global speed_vertical_cube, speed_horizontal_cube, speed_ver_rez_cube, speed_hor_rez_cube
         teleport_sound = pygame.mixer.Sound('data/teleport_sound.wav')
         pygame.mixer.Sound.play(teleport_sound)
@@ -1303,7 +1304,7 @@ class Button(pygame.sprite.Sprite):
 
     def interaction_cube(self, side_of_movement, step=STEP):
         # функция взаимодействия куба и кнопки со всех четырех сторон,
-        # акже в ней определяется стоит ли персонаж на кнопке или нет и
+        # также в ней определяется стоит ли персонаж на кнопке или нет и
         # выключается кнопка
         global speed_vertical_cube, flag_stand, speed_horizontal_cube, \
             speed_ver_rez_cube, speed_hor_rez_cube
@@ -1432,7 +1433,7 @@ class Portal(pygame.sprite.Sprite):
         self.opened = False
 
     def add_frames(self):
-        # добавление изображений порталов в атрибут класса
+        # добавление изображений порталов
         if self.color == 'blue':
             self.image0 = load_image("Шарик 1.gif")
             self.image0 = pygame.transform.scale(self.image0, (WIDTH_SPHERE, HEIGHT_SPHERE))
@@ -1891,8 +1892,6 @@ def reinit_groups():  # Обнуление всего, инициализаци�
     pygame.time.set_timer(door_event, 100)
     bullet_move_event = 20
     pygame.time.set_timer(bullet_move_event, 2)
-    t_bridge_event = 22
-    pygame.time.set_timer(t_bridge_event, 1)
     player_group = pygame.sprite.Group()
     turret_group = pygame.sprite.Group()
     blue_portal_group = pygame.sprite.Group()
@@ -2109,7 +2108,7 @@ def load_level(filename='data/save.txt', val=0): # Загрузка уровня
         Acid(int(lines[last_str + k][0]), int(lines[last_str + k][1]), int(lines[last_str + k][2]),
              int(lines[last_str + k][3]))
 
-    # Загрузка воздушных платформ
+    # Загрузка воздушных панелей
     last_str += cnt_acids
     cnt_panels = int(lines[last_str][0])
     last_str += 1
@@ -2117,7 +2116,7 @@ def load_level(filename='data/save.txt', val=0): # Загрузка уровня
         AirPanel(int(lines[last_str + k][0]), int(lines[last_str + k][1]), int(lines[last_str + k][2]),
                  int(lines[last_str + k][3]))
 
-    # Загрузка мостов
+    # Загрузка мостов света
     last_str += cnt_panels
     bridge_in_level = bool(int(lines[last_str][0]))
     last_str += 1
@@ -2127,7 +2126,7 @@ def load_level(filename='data/save.txt', val=0): # Загрузка уровня
     bridge_2 = Platform(int(lines[last_str][0]), int(lines[last_str][1]), int(lines[last_str][2]),
                         int(lines[last_str][3]), 'no', [], [], [], [], 'bridge')
 
-    # Загрузка стрелок
+    # Загрузка стрелочек
     last_str += 1
     cnt_arrows = int(lines[last_str][0])
     last_str += 1
@@ -2309,7 +2308,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                     pygame.mixer.Sound.play(airpanel_sound)
                     speed_horizontal_cube = panel.x_speed
                     speed_vertical_cube = panel.y_speed
-            # Телепортирование моста
+            # Телепортирование моста света
             if pygame.sprite.spritecollideany(bridge_1, blue_portal_group) and blue_portal.opened \
                     and yellow_portal.opened:
                 bridge_2.teleport(yellow_portal, WIDTH_SCREEN, HEIGHT_SCREEN)
@@ -2413,7 +2412,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                 for button in button_group:
                     button.interaction('n')
                 player.rect.left += dop_step
-                # обновление изображения спрайта
+                # обновление изображения спрайта персонажа
                 if player.rect.left + WIDTH_CHELL // 2 - pygame.mouse.get_pos()[0] > 0:
                     player.update(True, False)
                 else:
@@ -2431,6 +2430,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                 flag_stand = True
                 speed_vertical = -15
             # событие нажатия на кнопку и активирования соответственных проводов
+            # и запуска телепортирование телепортирующегося куба по флагу
             if event.type == door_event:
                 for i in button_group:
                     if i.control_thing.activated_list[i.thing_arg]:
@@ -2444,15 +2444,19 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                             if cube.t_flag:
                                 cube.thing_on()
                                 player_left_cube = player_right_cube = 0
+                                speed_vertical_cube = 0
+                                speed_horizontal_cube = 0
                                 cube.t_flag = False
                                 start_ticks = pygame.time.get_ticks()
                         else:
                             i.control_thing.thing_on()
                     else:
                         i.control_thing.thing_off()
+            # Присваивание флагу телепортирования телепортирующегося куба True
+            # по прошествии трёх секунд после последней телепортации
             if (pygame.time.get_ticks() - start_ticks) / 1000 > 3:
                 cube.t_flag = True
-            # событие падения или прыжка. Изменяет положение перса/куба и их скорость
+            # событие падения или прыжка. Изменяет положение персонажа/куба и их скорость
             if event.type == svobod_pad_event:
                 # учет взаимодействия с полом
                 if not pygame.sprite.collide_mask(player, floor) and speed_vertical >= 0:
@@ -2520,7 +2524,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                                 player.rect.top += dop
                             if not speed_vertical:
                                 flag_stand = False
-                # прыжок(или вылет из поратала) с учетом взаимодействия с платформами, кубом, кнопками
+                # прыжок(или вылет из портала) с учетом взаимодействия с платформами, кубом, кнопками
                 elif speed_vertical < 0:
                     dop = abs(speed_vertical)
                     if not cube.position:
@@ -2773,7 +2777,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                     elif pygame.sprite.spritecollideany(bullet, construction_group) and not \
                             pygame.sprite.spritecollideany(bullet, turret_group):
                         bullet.kill()
-            # изменение изображений персонажа
+            # запуск метода постановки статичного изображения персонажа
             if not pygame.key.get_pressed()[97] and not pygame.key.get_pressed()[100]:
                 if pygame.mouse.get_pos()[0] < player.rect.left + WIDTH_CHELL // 2:
                     player.normal(False)
@@ -2827,12 +2831,12 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                 if pygame.sprite.collide_mask(player, acid):
                     player.rect.top += 10
                     death_player()
-            # ограничение скоростей
+            # ограничение верикальных скоростей персонажа и куба
             if speed_vertical > 75:
                 speed_vertical = 75
             if speed_vertical_cube > 75:
                 speed_vertical_cube = 75
-        # выход из цикла при проходе через дверь
+        # выход из цикла при проходе через дверь за пределы окна
         if player.rect.x + WIDTH_CHELL < 25 or player.rect.x > WIDTH_SCREEN - 25:
             win_flag = 1
             running = False
@@ -2874,10 +2878,10 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
             else:
                 pause_save_flag = False
                 alpha = 255
-
+        # Прорисовка курсора
         if pygame.mouse.get_focused():
             cursor_group.draw(screen)
-
+        # Запуск смерти персонажа по флагу смерти
         if death:
             if death_aplha == 0:
                 death_image = load_image("youdied.png", -2)
