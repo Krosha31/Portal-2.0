@@ -61,11 +61,13 @@ def load_image(name, colorkey=None):  # Загрузка изображения
 
 
 def death_player():
+    # функция смерти персонажа
     global death
     death = True
 
 
 def cross(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2):
+    # функция проверки пересечения двух отрезков. Используется для турелью для определения препядствий до игрока
     v1 = (bx2 - bx1) * (ay1 - by1) - (by2 - by1) * (ax1 - bx1)
     v2 = (bx2 - bx1) * (ay2 - by1) - (by2 - by1) * (ax2 - bx1)
     v3 = (ax2 - ax1) * (by1 - ay1) - (ay2 - ay1) * (bx1 - ax1)
@@ -1680,6 +1682,7 @@ class Portal(pygame.sprite.Sprite):
 
 
 class Turret(pygame.sprite.Sprite):
+    # класс турели. Загузка изображений в зависимости от положения турели
     def __init__(self, x, y, napr):
         super().__init__(all_sprites, construction_group, turret_group)
         self.napr = napr
@@ -1701,6 +1704,7 @@ class Turret(pygame.sprite.Sprite):
         self.rect = self.rect.move(x, y)
 
     def death(self):
+        # метод смерти турели
         if self.napr == 'right':
             self.image = load_image('turret_right.gif')
         elif self.napr == 'left':
@@ -1727,6 +1731,7 @@ class Turret(pygame.sprite.Sprite):
 
 
 class Bullet(pygame.sprite.Sprite):
+    # класс пули. Высчитывание траектории полета пули
     def __init__(self, x1, y1, x2, y2, napr, turret):
         super().__init__(bullet_group)
         self.napr = napr
@@ -1751,6 +1756,7 @@ class Bullet(pygame.sprite.Sprite):
 
 
 class Acid(pygame.sprite.Sprite):
+    # класс кислоты
     def __init__(self, x, y, w, h,):
         super().__init__(acid_group)
         self.image = load_image('acid.jpg')
@@ -2684,6 +2690,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                         cube.rect.left += dop
                     elif indi_right_left_cube == 'l':
                         cube.rect.left -= dop
+            # проверка живых турелей на взаимодействие с кубом и игроком
             for turret in turret_group:
                 if turret.life:
                     if pygame.sprite.collide_mask(turret, player):
@@ -2694,6 +2701,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                         turret.death()
                         speed_horizontal_cube = 0
                         speed_vertical_cube = 1
+            # событие выстрела турели
             if event.type == bullet_event:
                 dop_count = 0
                 if len(turret_group) != 0:
@@ -2715,6 +2723,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                     if turret.napr == "right" and player.rect.left + WIDTH_CHELL // 2 > \
                             turret.rect.left + turret.w // 2 or turret.napr == "left" and\
                             player.rect.left + WIDTH_CHELL // 2 < turret.rect.left + turret.w // 2:
+                        # проверка на то, попадает ли пуля в статичный объект
                         for object in coords_static:
                             if turret.rect.top < object[0][1]:
                                 result = cross(x1, y1, x2, y2, object[0][0], object[0][1],
@@ -2736,6 +2745,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                                                object[3][2], object[3][3])
                                 if result:
                                     break
+                        # проверка на то, попадает ли пуля в нестатичный объект
                         if not result:
                             for group in [door_group, bridge_group]:
                                 for object in group:
@@ -2761,12 +2771,14 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                                             object.rect.left + object.w, object.rect.top + object.h)
                                         if result:
                                             break
+                        # Создание пули
                         if turret.napr == 'right' and not result:
                             Bullet(x1, y1, x2, y2, 'right', turret)
                             pygame.mixer.Sound.play(turret_shot_sound)
                         elif not result:
                             Bullet(x1, y1, x2, y2, 'left', turret)
                             pygame.mixer.Sound.play(turret_shot_sound)
+            # событие полета пули. Имзеняет положение пуль в пространстве
             if event.type == bullet_move_event:
                 for bullet in bullet_group:
                     bullet.rect.left += bullet.xplus
