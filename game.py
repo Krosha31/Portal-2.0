@@ -33,6 +33,9 @@ t_bridge_event = 22
 pygame.time.set_timer(t_bridge_event, 1)
 cube_in_level = True
 speed_bullet = 10
+turret_shot_sound = pygame.mixer.Sound('data/turret_shot_sound.wav')
+airpanel_sound = pygame.mixer.Sound('data/airpanel_sound.wav')
+player_die_sound = pygame.mixer.Sound('data/player_die_sound.wav')
 pygame.time.set_timer(door_event, 100)
 bridge_in_level = True
 player_group = pygame.sprite.Group()
@@ -43,13 +46,14 @@ cube_group = pygame.sprite.Group()
 background_group = pygame.sprite.Group()
 player_left_cube = player_right_cube = 0
 death = False
-death_clock = pygame.time.Clock()
 
 
 def load_image(name, colorkey=None):  # Загрузка изображения
     fullname = os.path.join('data', name)
     image = pygame.image.load(fullname).convert()
     if colorkey is not None:
+        if colorkey == -2:
+            return image
         if colorkey == -1:
             color_key = image.get_at((0, 0))
         image.set_colorkey(color_key)
@@ -59,10 +63,8 @@ def load_image(name, colorkey=None):  # Загрузка изображения
 
 
 def death_player():
-    global death, death_clock, running
+    global death
     death = True
-    death_clock.tick()
-    running = False
 
 
 def cross(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2):
@@ -1691,6 +1693,8 @@ class Turret(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, (self.w, self.h))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
+        self.turret_die_sound = pygame.mixer.Sound('data/turret_die_sound.wav')
+        self.turret_die_sound.set_volume(0.5)
         self.rect = self.rect.move(x, y)
 
     def death(self):
@@ -1699,6 +1703,7 @@ class Turret(pygame.sprite.Sprite):
         elif self.napr == 'left':
             self.image = load_image('turret_left.gif')
         self.image = pygame.transform.scale(self.image, (70, 20))
+        pygame.mixer.Sound.play(self.turret_die_sound)
         self.h = 20
         self.rect.top += 50
         self.life = False
@@ -1807,7 +1812,7 @@ def back_to_menu():  # Возвращение в главное меню
 
 
 def save_game():  # Сохранение игры
-    global player, cube, num_level, yellow_portal, blue_portal, now_screen
+    global player, cube, num_level, yellow_portal, blue_portal, now_screen, pause_save_flag
     # Название файла сохранения
     date = str(datetime.datetime.now()).split('.')[0]
     filename = "data/saves/" + date + ".txt"
@@ -1840,6 +1845,8 @@ def save_game():  # Сохранение игры
         pygame.image.save(now_screen, imagename)
     except Exception as error:
         print(error)
+
+    pause_save_flag = True
 
 
 def load_game():  # Загрузка последнего сохранения
@@ -1904,18 +1911,21 @@ def reinit_groups():  # Обнуление всего, инициализаци�
     pause_group = pygame.sprite.Group()
 
 
-def load_level(filename='data/save.txt'): # Загрузка уровня из файла
+def load_level(filename='data/save.txt', val=0): # Загрузка уровня из файла
     global all_sprites, wall_left_group, wall_right_group, floor_group, ceiling_group, \
         construction_group, platform_group, door_group, wire_group, button_group, \
         cube_in_level, player, cube, blue_portal, yellow_portal, cursor, background_group, \
         arrow_group, panel_group, bridge_group, bridge_1, bridge_2, pause_group, num_level, \
         bridge_in_level, turret_group, bullet_event, bullet_group
-    file_level = open(filename, encoding='utf8')
-    if filename != 'data/save.txt':
-        dop = file_level.readlines()
-        num_level = int(dop[0])
+    if val == 0:
+        file_level = open(filename, encoding='utf8')
+        if filename != 'data/save.txt':
+            dop = file_level.readlines()
+            num_level = int(dop[0])
+        else:
+            num_level = int(file_level.read().split()[0])
     else:
-        num_level = int(file_level.read().split()[0])
+        num_level = val
     name_file = 'data/level_{}.txt'.format(str(num_level))
     file_objects = open(name_file, encoding='utf8')
     lines = file_objects.readlines()
@@ -2071,6 +2081,8 @@ def load_level(filename='data/save.txt'): # Загрузка уровня из �
     bridge_1 = Platform(0, 0, 0, 0, 'no', [], [], [], [], 'bridge')
     bridge_2 = Platform(0, 0, 0, 0, 'no', [], [], [], [], 'bridge')
 
+    Turret(400, 500, "right")
+
     # Запуск главного цикла
     return game_cycle(screen, size, num_level, floor, wall_left, wall_right)
 
@@ -2081,7 +2093,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
         speed_vertical, speed_horizontal, speed_vertical_cube, speed_horizontal_cube, speed_ver_rez, speed_hor_rez, \
         speed_ver_rez_cube, speed_hor_rez_cube, player_left_cube, player_right_cube, background_group, arrow_group, \
         panel_group, bridge_group, bridge_1, bridge_2, pause_group, pause_flag, running, win_flag, now_screen, \
-        turret_group, bullet_group, death, acid_group
+        turret_group, bullet_group, death, acid_group, pause_save_flag
     # декоративные элементы окна
     coords_static = []
     for object in construction_group:
@@ -2114,11 +2126,18 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
     speed_ver_rez = speed_hor_rez = 0
     speed_ver_rez_cube = speed_hor_rez_cube = 0
     player_left_cube = player_right_cube = 0
-    death_time = 0
-    death_clock = pygame.time.Clock()
+    death = False
+    death_aplha = 0
     flag_stand = True
     flag_stand_cube = True
     start_ticks = 0
+    go_sound = pygame.mixer.Sound('data/go_sound.wav')
+    go_sound.set_volume(0.05)
+    groups = [platform_group, button_group, cube_group]
+    win_flag = 0
+    pause_flag = False
+    functional_buttons = [FunctionalButton(400, 40)] * 5
+
     # изменение курсора
     cursor_image = load_image('cursor.png', colorkey=-1)
     cursor_image = pygame.transform.scale(cursor_image, (50, 50))
@@ -2126,16 +2145,22 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
     cursor.image = cursor_image
     cursor.rect = cursor.image.get_rect()
     pygame.mouse.set_visible(False)
-    go_sound = pygame.mixer.Sound('data/go_sound.wav')
-    go_sound.set_volume(0.05)
-    groups = [platform_group, button_group, cube_group]
-    win_flag = 0
-    pause_flag = False
-    functional_buttons = [FunctionalButton(400, 40)] * 5
+
+    # Переменные для затухания надписи "Игра сохранена"
+    pause_save_flag = False
+    font = pygame.font.Font(None, 25)
+    white = pygame.Color('white')
+    orig_surf = font.render('Игра сохранена', True, white)
+    txt_surf = orig_surf.copy()
+    alpha_surf = pygame.Surface(txt_surf.get_size(), pygame.SRCALPHA)
+    alpha = 255
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            if death:
+                continue
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 pause_flag = not pause_flag
             if event.type == pygame.MOUSEMOTION:
@@ -2200,6 +2225,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                     if not cube.position:
                         cube.rect.y -= abs(player.rect.y - (panel.rect.y - HEIGHT_CHELL))
                     player.rect.y = panel.rect.y - HEIGHT_CHELL
+                    pygame.mixer.Sound.play(airpanel_sound)
                     speed_horizontal = panel.x_speed
                     speed_vertical = panel.y_speed
             # Взаимодействие куба с воздушной панелью
@@ -2208,6 +2234,7 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                 if cube.rect.y + HEIGHT_CUBE - 5 <= panel.rect.y + HEIGHT_PANEL and \
                         panel.rect.x - WIDTH_CUBE <= cube.rect.x <= panel.rect.x + WIDTH_PANEL - WIDTH_CUBE:
                     cube.rect.y = panel.rect.y - HEIGHT_CUBE
+                    pygame.mixer.Sound.play(airpanel_sound)
                     speed_horizontal_cube = panel.x_speed
                     speed_vertical_cube = panel.y_speed
             # Телепортирование моста
@@ -2660,8 +2687,10 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
                                             break
                         if turret.napr == 'right' and not result:
                             Bullet(x1, y1, x2, y2, 'right', turret)
+                            pygame.mixer.Sound.play(turret_shot_sound)
                         elif not result:
                             Bullet(x1, y1, x2, y2, 'left', turret)
+                            pygame.mixer.Sound.play(turret_shot_sound)
             if event.type == bullet_move_event:
                 for bullet in bullet_group:
                     bullet.rect.left += bullet.xplus
@@ -2762,28 +2791,32 @@ def game_cycle(screen, size, level_number, floor, wall_left, wall_right):  # и�
         # Меню паузы
         if pause_flag:
             draw_pause_menu(screen, functional_buttons, WIDTH_SCREEN, HEIGHT_SCREEN)
+        if pause_save_flag:
+            # Постепенное исчезание надписи "Игра сохранена"
+            if alpha > 3:
+                alpha -= 3
+                txt_surf = orig_surf.copy()
+                alpha_surf.fill((255, 255, 255, alpha))
+                txt_surf.blit(alpha_surf, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+                screen.blit(txt_surf, (WIDTH_SCREEN // 2 + 220, HEIGHT_SCREEN // 2 + 230))
+            else:
+                pause_save_flag = False
+                alpha = 255
 
         if pygame.mouse.get_focused():
             cursor_group.draw(screen)
+
+        if death:
+            if death_aplha == 0:
+                death_image = load_image("youdied.png", -2)
+                death_image = pygame.transform.scale(death_image, (WIDTH_SCREEN, HEIGHT_SCREEN))
+                pygame.mixer.Sound.play(player_die_sound)
+            death_image.set_alpha(int(death_aplha))
+            death_aplha += 1.5
+            screen.blit(death_image, (0, 0))
+            if death_aplha > 255:
+                reload_level()
         pygame.display.flip()
-    if death:
-        running = True
-        background = pygame.sprite.Sprite()
-        background_group.add(background)
-        background_image = load_image("youdied.jpg")
-        background.image = pygame.transform.scale(background_image, (size[0], size[1]))
-        background.rect = background.image.get_rect()
-        background.rect.x = 0
-        background.rect.y = 0
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                death_time += death_clock.tick()
-                if death_time >= 3000:
-                    death = False
-                    reload_level()
-            background_group.draw(screen)
-            pygame.display.flip()
+
     pygame.quit()
     return win_flag
