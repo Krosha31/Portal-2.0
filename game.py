@@ -1828,7 +1828,11 @@ def save_game():  # Сохранение игры
     file = open(filename, "w")
     file.write(str(num_level) + "\n")
     file.write(str(player.rect.left) + " " + str(player.rect.top - 5) + "\n")
-    file.write(str(cube.rect.left) + " " + str(cube.rect.top - 5) + "\n")
+    if cube.type == 'n':
+        file.write(str(cube.rect.left) + " " + str(cube.rect.top - 5) + "\n")
+    else:
+        file.write(str(cube.rect.left) + " " + str(cube.rect.top - 5) + " " + cube.type + " " +
+                   str(cube.t_x) + " " + str(cube.t_y) + "\n")
     file.write(str(int(yellow_portal.active)) + " " + str(int(yellow_portal.opened)) + " " +
                str(yellow_portal.position) + " " +
                str(yellow_portal.last_x) + " " + str(yellow_portal.last_y) + "\n")
