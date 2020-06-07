@@ -2,13 +2,11 @@ import sys
 import pygame
 import os
 from PyQt5 import uic
-from PyQt5.QtWidgets import QApplication, QPushButton, QMainWindow, \
-    QErrorMessage, QTableWidgetItem, QHeaderView, QInputDialog, QStyle, QWidget, QTableWidget, QAbstractItemView, \
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidgetItem, QHeaderView, QWidget, QAbstractItemView, \
     QHBoxLayout
-from PyQt5.QtGui import QColor, QImage, QPalette, QBrush, QIcon, QPixmap, QPainter
+from PyQt5.QtGui import QImage, QPalette, QBrush, QIcon, QPixmap, QPainter
 from PyQt5.QtCore import Qt
-from game import load_image, load_level, reinit_groups
-import time
+from game import load_level, reinit_groups
 
 
 class ImageWidget(QWidget):
