@@ -15,7 +15,6 @@ class ImageWidget(QWidget):
     def __init__(self, imagePath, parent):
         super(ImageWidget, self).__init__(parent)
         self.picture = QPixmap(imagePath)
-        width, height = self.picture.size().width(), self.picture.size().height()
         self.picture = self.picture.scaled(500, 300)
 
     def paintEvent(self, event):
@@ -85,9 +84,9 @@ class LevelsWindow(QWidget):
         self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.tableWidget.horizontalHeader().hide()
         self.tableWidget.verticalHeader().hide()
-        self.tableWidget.setRowCount(4)
+        self.tableWidget.setRowCount(10)
 
-        for i in range(4):
+        for i in range(10):
             self.tableWidget.setItem(i, 1, QTableWidgetItem("Уровень " + str(i + 1)))
             try:
                 image = ImageWidget("data/level_" + str(i + 1) + "_image.png", self.tableWidget)
@@ -363,7 +362,7 @@ class MainWindow(QMainWindow):
             print(error)
         reinit_groups()
 
-        while num_level < 4 and win_flag == 1:
+        while num_level < 10 and win_flag == 1:
             max_level = max(num_level, max_level)
             num_level += 1
             file_level = open('data/save.txt', 'w')
@@ -372,7 +371,7 @@ class MainWindow(QMainWindow):
             self.reinit_pygame()
             reinit_groups()
             win_flag = load_level()
-        if num_level == 4 and win_flag == 1:
+        if num_level == 10 and win_flag == 1:
             file_level = open('data/save.txt', 'w')
             file_level.write(str(num_level) + ' ' + str(max_level + 1))
             file_level.close()
@@ -406,7 +405,7 @@ class MainWindow(QMainWindow):
         win_flag = load_level()
         reinit_groups()
 
-        while num_level < 4 and win_flag == 1:
+        while num_level < 10 and win_flag == 1:
             max_level = max(num_level, max_level)
             num_level += 1
             file_level = open('data/save.txt', 'w')
@@ -415,7 +414,7 @@ class MainWindow(QMainWindow):
             self.reinit_pygame()
             reinit_groups()
             win_flag = load_level()
-        if num_level == 4 and win_flag == 1:
+        if num_level == 10 and win_flag == 1:
             file_level = open('data/save.txt', 'w')
             file_level.write(str(num_level) + ' ' + str(max_level + 1))
             file_level.close()
@@ -457,7 +456,7 @@ class MainWindow(QMainWindow):
         win_flag = load_level(name_last_save)
         reinit_groups()
 
-        while num_level < 4 and win_flag == 1:
+        while num_level < 10 and win_flag == 1:
             max_level = max(num_level, max_level)
             num_level += 1
             file_level = open('data/save.txt', 'w')
@@ -466,7 +465,7 @@ class MainWindow(QMainWindow):
             self.reinit_pygame()
             reinit_groups()
             win_flag = load_level()
-        if num_level == 4 and win_flag == 1:
+        if num_level == 10 and win_flag == 1:
             file_level = open('data/save.txt', 'w')
             file_level.write(str(num_level) + ' ' + str(max_level + 1))
             file_level.close()
@@ -504,7 +503,7 @@ class MainWindow(QMainWindow):
         win_flag = load_level(filename=savename)
         reinit_groups()
 
-        while num_level < 4 and win_flag == 1:
+        while num_level < 10 and win_flag == 1:
             max_level = max(num_level, max_level)
             num_level += 1
             file_level = open('data/save.txt', 'w')
@@ -513,7 +512,7 @@ class MainWindow(QMainWindow):
             self.reinit_pygame()
             reinit_groups()
             win_flag = load_level()
-        if num_level == 4 and win_flag == 1:
+        if num_level == 10 and win_flag == 1:
             file_level = open('data/save.txt', 'w')
             file_level.write(str(num_level) + ' ' + str(max_level + 1))
             file_level.close()

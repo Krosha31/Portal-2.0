@@ -940,6 +940,7 @@ class Cube(pygame.sprite.Sprite):
         self.t_y = t_y
         self.t_flag = True
         self.color = 'black'
+        self.teleport_sound = pygame.mixer.Sound("data/teleport_sound.wav")
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.w = WIDTH_CUBE
@@ -1190,6 +1191,7 @@ class Cube(pygame.sprite.Sprite):
             self.rect.x = self.t_x
             self.rect.y = self.t_y
             self.position = True
+            pygame.mixer.Sound.play(self.teleport_sound)
 
     def thing_off(self):  # Метод реагирования куба на разжатие кнопки
         if self.type == 't':
@@ -1370,7 +1372,7 @@ class Button(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect = self.rect.move(self.x, self.y + 5)
         if not self.activated:
-            if self.main_button:
+            if self.main_button and self.control_thing.__class__.__name__ == "Platform":
                 pygame.mixer.Sound.play(self.door_sound)
             pygame.mixer.Sound.play(self.button_sound)
         self.activated = True
@@ -1383,7 +1385,7 @@ class Button(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect = self.rect.move(self.x, self.y)
         if self.activated:
-            if self.main_button:
+            if self.main_button and self.control_thing.__class__.__name__ == "Platform":
                 pygame.mixer.Sound.play(self.door_sound)
             pygame.mixer.Sound.play(self.button_sound)
         self.activated = False
@@ -1812,7 +1814,7 @@ def back_to_menu():  # Возвращение в главное меню
 
 
 def save_game():  # Сохранение игры
-    global player, cube, num_level, yellow_portal, blue_portal, now_screen, pause_save_flag
+    global player, cube, num_level, yellow_portal, blue_portal, now_screen, pause_save_flag, turret_group
     # Название файла сохранения
     date = str(datetime.datetime.now()).split('.')[0]
     filename = "data/saves/" + date + ".txt"
@@ -1832,7 +1834,9 @@ def save_game():  # Сохранение игры
                str(yellow_portal.last_x) + " " + str(yellow_portal.last_y) + "\n")
     file.write(str(int(blue_portal.active)) + " " + str(int(blue_portal.opened)) + " " +
                str(blue_portal.position) + " " +
-               str(blue_portal.last_x) + " " + str(blue_portal.last_y))
+               str(blue_portal.last_x) + " " + str(blue_portal.last_y) + "\n")
+    for turret in turret_group:
+        file.write(str(turret.rect.left) + " " + str(turret.rect.top) + " " + str(int(turret.life)) + "\n")
     file.close()
 
     # Обновление последнего сохранения
@@ -1986,23 +1990,26 @@ def load_level(filename='data/save.txt', val=0): # Загрузка уровня
             floor_group.add(floor)
 
     # Загрузка платформ
-    cnt_platforms = int(lines[5][0])
-    for k in range(cnt_platforms):
-        interval = [[], [], [], []]
-        i, now_inter = 5, 0
-        while i < len(lines[k + 6]):
-            cnt = int(lines[k + 6][i])
-            i += 1
-            for j in range(cnt):
-                left = int(lines[k + 6][i])
+    try:
+        cnt_platforms = int(lines[5][0])
+        for k in range(cnt_platforms):
+            interval = [[], [], [], []]
+            i, now_inter = 5, 0
+            while i < len(lines[k + 6]):
+                cnt = int(lines[k + 6][i])
                 i += 1
-                right = int(lines[k + 6][i])
-                i += 1
-                interval[now_inter].append((left, right))
-            now_inter += 1
-        Platform(int(lines[k + 6][0]), int(lines[k + 6][1]), int(lines[k + 6][2]),
-                 int(lines[k + 6][3]), lines[k + 6][4], interval[0],
-                 interval[1], interval[2], interval[3])
+                for j in range(cnt):
+                    left = int(lines[k + 6][i])
+                    i += 1
+                    right = int(lines[k + 6][i])
+                    i += 1
+                    interval[now_inter].append((left, right))
+                now_inter += 1
+            Platform(int(lines[k + 6][0]), int(lines[k + 6][1]), int(lines[k + 6][2]),
+                     int(lines[k + 6][3]), lines[k + 6][4], interval[0],
+                     interval[1], interval[2], interval[3])
+    except Exception as error:
+        print(error)
 
     # Загрузка персонажа
     last_str = cnt_platforms + 6
@@ -2011,23 +2018,39 @@ def load_level(filename='data/save.txt', val=0): # Загрузка уровня
     else:
         player = Player(int(lines[last_str][0]), int(lines[last_str][1]))
 
+    obj_for_buttons = []
+
     # Загрузка куба
     cube_in_level = bool(int(int(lines[last_str + 1][0])))
     if filename != "data/save.txt":
-        cube = Cube(int(dop[2].split()[0]), int(dop[2].split()[1]))
+        if len(dop[2].split()) == 2:
+            cube = Cube(int(dop[2].split()[0]), int(dop[2].split()[1]))
+        else:
+            cube = Cube(int(dop[2].split()[0]), int(dop[2].split()[1]), dop[2].split()[2],
+                        int(dop[2].split()[3]), int(dop[2].split()[4]))
+            obj_for_buttons.append(cube)
     else:
-        cube = Cube(int(lines[last_str + 2][0]), int(lines[last_str + 2][1]))
-
-    obj_for_buttons = []
+        if len(lines[last_str + 2]) == 2:
+            cube = Cube(int(lines[last_str + 2][0]), int(lines[last_str + 2][1]))
+        else:
+            cube = Cube(int(lines[last_str + 2][0]), int(lines[last_str + 2][1]),
+                        lines[last_str + 2][2], int(lines[last_str + 2][3]), int(lines[last_str + 2][4]))
+            obj_for_buttons.append(cube)
 
     # Загрузка дверей
     last_str += 3
     cnt_doors = int(lines[last_str][0])
     last_str += 1
     for k in range(cnt_doors):
-        door = Platform(int(lines[last_str + k][0]), int(lines[last_str + k][1]), int(lines[last_str + k][2]),
-                        int(lines[last_str + k][3]), '', [(0, 0)], [(0, 0)],
-                        [(0, 0)], [(0, 0)], lines[last_str + k][4], int(lines[last_str + k][5]))
+        if len(lines[last_str + k]) == 6:
+            door = Platform(int(lines[last_str + k][0]), int(lines[last_str + k][1]), int(lines[last_str + k][2]),
+                            int(lines[last_str + k][3]), '', [(0, 0)], [(0, 0)],
+                            [(0, 0)], [(0, 0)], lines[last_str + k][4], int(lines[last_str + k][5]))
+        else:
+            door = Platform(int(lines[last_str + k][0]), int(lines[last_str + k][1]), int(lines[last_str + k][2]),
+                            int(lines[last_str + k][3]), '', [(0, 0)], [(0, 0)],
+                            [(0, 0)], [(0, 0)], lines[last_str + k][4], int(lines[last_str + k][5]),
+                            int(lines[last_str + k][6]))
         obj_for_buttons.append(door)
 
     # Загрузка стен-хамелеонов
@@ -2044,8 +2067,22 @@ def load_level(filename='data/save.txt', val=0): # Загрузка уровня
                             lines[last_str + k][12], int(lines[last_str + k][13]))
         obj_for_buttons.append(hameleon)
 
-    # Загрузка кнопок
+    # Загрузка турелей
     last_str += cnt_hameleons
+    cnt_turrets = int(lines[last_str][0])
+    last_str += 1
+    for k in range(cnt_turrets):
+        if filename != "data/save.txt":
+            turret = Turret(int(dop[k + 5].split()[0]), int(dop[k + 5].split()[1]), lines[last_str + k][2])
+            if not bool(int(dop[k + 5].split()[2])):
+                turret.rect.top -= 50
+                turret.death()
+        else:
+            turret = Turret(int(lines[last_str + k][0]), int(lines[last_str + k][1]), lines[last_str + k][2])
+        obj_for_buttons.append(turret)
+
+    # Загрузка кнопок
+    last_str += cnt_turrets
     cnt_buttons = int(lines[last_str][0])
     last_str += 1
     for k in range(cnt_buttons):
@@ -2059,6 +2096,43 @@ def load_level(filename='data/save.txt', val=0): # Загрузка уровня
         button = Button(int(lines[last_str + k][0]), int(lines[last_str + k][1]),
                         obj_for_buttons[int(lines[last_str + k][2])], button_wire_list,
                         int(lines[last_str + k][now_j]), bool(int(lines[last_str + k][now_j + 1])))
+
+    # Загрузка кислоты
+    last_str += cnt_buttons
+    cnt_acids = int(lines[last_str][0])
+    last_str += 1
+    for k in range(cnt_acids):
+        Acid(int(lines[last_str + k][0]), int(lines[last_str + k][1]), int(lines[last_str + k][2]),
+             int(lines[last_str + k][3]))
+
+    # Загрузка воздушных платформ
+    last_str += cnt_acids
+    cnt_panels = int(lines[last_str][0])
+    last_str += 1
+    for k in range(cnt_panels):
+        AirPanel(int(lines[last_str + k][0]), int(lines[last_str + k][1]), int(lines[last_str + k][2]),
+                 int(lines[last_str + k][3]))
+
+    # Загрузка мостов
+    last_str += cnt_panels
+    bridge_in_level = bool(int(lines[last_str][0]))
+    last_str += 1
+    bridge_1 = Platform(int(lines[last_str][0]), int(lines[last_str][1]), int(lines[last_str][2]),
+                        int(lines[last_str][3]), 'no', [], [], [], [], 'bridge')
+    last_str += 1
+    bridge_2 = Platform(int(lines[last_str][0]), int(lines[last_str][1]), int(lines[last_str][2]),
+                        int(lines[last_str][3]), 'no', [], [], [], [], 'bridge')
+
+    # Загрузка стрелок
+    last_str += 1
+    cnt_arrows = int(lines[last_str][0])
+    last_str += 1
+    for k in range(cnt_arrows):
+        if len(lines[last_str + k]) == 3:
+            Arrow(int(lines[last_str + k][0]), int(lines[last_str + k][1]), lines[last_str + k][2])
+        else:
+            Arrow(int(lines[last_str + k][0]), int(lines[last_str + k][1]), lines[last_str + k][2],
+                  lines[last_str + k][3])
 
     # Инициализация порталов
     blue_portal = Portal('blue')
@@ -2076,12 +2150,6 @@ def load_level(filename='data/save.txt', val=0): # Загрузка уровня
             yellow_portal.active, yellow_portal.opened, yellow_portal.position, \
             yellow_portal.rect.x, yellow_portal.rect.y = y_p[0], y_p[1], y_p[2], y_p[3], y_p[4]
             yellow_portal.portal_open()
-
-    bridge_in_level = False
-    bridge_1 = Platform(0, 0, 0, 0, 'no', [], [], [], [], 'bridge')
-    bridge_2 = Platform(0, 0, 0, 0, 'no', [], [], [], [], 'bridge')
-
-    Turret(400, 500, "right")
 
     # Запуск главного цикла
     return game_cycle(screen, size, num_level, floor, wall_left, wall_right)
